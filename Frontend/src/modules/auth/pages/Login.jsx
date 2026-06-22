@@ -36,7 +36,7 @@ export default function UnifiedOTPFastLogin() {
     const cached = getCachedSettings()
     return {
       logoUrl: cached?.logo?.url || null,
-      companyName: cached?.companyName || "ZiggyBites",
+      companyName: cached?.companyName || "MymealBites",
     }
   })
   const navigate = useNavigate()
@@ -50,7 +50,7 @@ export default function UnifiedOTPFastLogin() {
       if (!settings || cancelled) return
       setBrand({
         logoUrl: settings.logo?.url || null,
-        companyName: settings.companyName || "ZiggyBites",
+        companyName: settings.companyName || "MymealBites",
       })
     }
 
@@ -354,7 +354,7 @@ export default function UnifiedOTPFastLogin() {
               )}
             </div>
             <h1 className="text-4xl font-black italic tracking-tight text-[#1F6B3A] drop-shadow-sm">
-              {brand.companyName || "ZiggyBites"}
+              {brand.companyName || "MymealBites"}
             </h1>
             <div className="mx-auto mt-2 h-1 w-16 rounded-full bg-[#1F6B3A]" />
           </div>

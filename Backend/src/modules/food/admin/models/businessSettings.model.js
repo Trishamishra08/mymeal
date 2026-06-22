@@ -22,7 +22,7 @@ const businessSettingsSchema = new mongoose.Schema(
             url: { type: String, default: '' },
             publicId: { type: String, default: '' }
         },
-        supportEmail: { type: String, default: 'support@indianbites.com' },
+        supportEmail: { type: String, default: 'support@mymeals.com' },
         supportPhone: { type: String, default: '+91 1234567890' },
         supportHours: { type: String, default: '24/7 Availability' },
         termsAndConditionsPdf: {

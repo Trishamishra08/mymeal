@@ -11,7 +11,7 @@ export default function SplashScreen({ onFinish }) {
     const cached = getCachedSettings();
     return {
       logoUrl: cached?.logo?.url || '',
-      companyName: normalizeKitchenAppName(cached?.companyName) || 'ZiggyBites',
+      companyName: normalizeKitchenAppName(cached?.companyName) || 'MymealBites',
     };
   });
 
@@ -22,7 +22,7 @@ export default function SplashScreen({ onFinish }) {
         if (!mounted || !settings) return;
         setBrand({
           logoUrl: settings.logo?.url || '',
-          companyName: normalizeKitchenAppName(settings.companyName) || 'ZiggyBites',
+          companyName: normalizeKitchenAppName(settings.companyName) || 'MymealBites',
         });
       })
       .catch(() => { });
@@ -107,7 +107,7 @@ export default function SplashScreen({ onFinish }) {
                 transition={{ delay: 1.25, duration: 0.55, ease: 'easeOut' }}
                 className="mt-1 text-4xl font-black italic tracking-tight text-[#f21d1d]"
               >
-                {brand.companyName || 'ZiggyBites'}
+                {brand.companyName || 'MymealBites'}
               </motion.h1>
             </div>
 

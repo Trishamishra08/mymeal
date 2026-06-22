@@ -14,7 +14,7 @@ const getRazorpayBranding = () => {
   const storedLogo = typeof window !== 'undefined' ? window.localStorage.getItem('app_logo') : '';
 
   return {
-    name: cachedSettings?.companyName || APP_CONFIG.NAME || 'ZiggyBites',
+    name: cachedSettings?.companyName || APP_CONFIG.NAME || 'MymealBites',
     image: cachedSettings?.logo?.url || storedUserLogo || storedLogo || '/logo.png'
   };
 };

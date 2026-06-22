@@ -1,7 +1,7 @@
 {
-  "name": "ZiggyBites Kitchen",
-  "short_name": "ZiggyBites Kitchen",
-  "description": "ZiggyBites kitchen application",
+  "name": "MymealBites Kitchen",
+  "short_name": "MymealBites Kitchen",
+  "description": "MymealBites kitchen application",
   "start_url": "/food/restaurant",
   "scope": "/",
   "display": "standalone",

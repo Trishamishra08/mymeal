@@ -37,7 +37,7 @@ const STATUS_OPTIONS = [
 ];
 
 const DEFAULT_SUPPORT = {
-  supportEmail: "support@ziggybites.com",
+  supportEmail: "support@mymealbites.com",
   supportPhone: "+91 1234567890",
   supportHours: "24/7 Availability",
 };

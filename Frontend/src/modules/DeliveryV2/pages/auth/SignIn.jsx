@@ -26,7 +26,7 @@ export default function DeliverySignIn() {
     const cached = getCachedSettings()
     return {
       logoUrl: cached?.deliveryLogo?.url || cached?.logo?.url || null,
-      companyName: cached?.companyName || "ZiggyBites",
+      companyName: cached?.companyName || "MymealBites",
     }
   })
   const submitting = useRef(false)
@@ -38,7 +38,7 @@ export default function DeliverySignIn() {
       if (!settings || cancelled) return
       setBrand({
         logoUrl: settings.deliveryLogo?.url || settings.logo?.url || null,
-        companyName: settings.companyName || "ZiggyBites",
+        companyName: settings.companyName || "MymealBites",
       })
     }
 
@@ -123,7 +123,7 @@ export default function DeliverySignIn() {
               )}
             </div>
             <h1 className="text-4xl font-black italic tracking-tight text-[#ff1f1f] drop-shadow-sm">
-              {brand.companyName || "ZiggyBites"}
+              {brand.companyName || "MymealBites"}
             </h1>
             <div className="mx-auto mt-2 h-1 w-16 rounded-full bg-[#ff1f1f]" />
           </div>

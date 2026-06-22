@@ -37,7 +37,7 @@ export default function FoodPreference() {
     const cached = getCachedSettings()
     return {
       logoUrl: cached?.logo?.url || null,
-      companyName: cached?.companyName || "ZiggyBites",
+      companyName: cached?.companyName || "MymealBites",
     }
   })
 
@@ -48,7 +48,7 @@ export default function FoodPreference() {
       if (!settings || cancelled) return
       setBrand({
         logoUrl: settings.logo?.url || null,
-        companyName: settings.companyName || "ZiggyBites",
+        companyName: settings.companyName || "MymealBites",
       })
     }
 

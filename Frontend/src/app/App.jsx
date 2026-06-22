@@ -42,7 +42,7 @@ function App() {
           <div className="absolute inset-0 border-4 border-[#7e3866]/10 rounded-full" />
           <div className="absolute inset-0 border-4 border-t-[#7e3866] rounded-full animate-spin" />
         </div>
-        <h1 className="text-2xl font-black text-[#7e3866] italic uppercase tracking-tighter mt-6">ZIGGYBITES</h1>
+        <h1 className="text-2xl font-black text-[#7e3866] italic uppercase tracking-tighter mt-6">MYMEALBITES</h1>
       </div>
     )
   }

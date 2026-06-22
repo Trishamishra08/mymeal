@@ -109,7 +109,7 @@ export default function ChangeSubscriptionDishCheckout() {
           amount: payload.razorpay.amount,
           currency: payload.razorpay.currency || "INR",
           order_id: payload.razorpay.orderId,
-          name: "ZiggyBites",
+          name: "MymealBites",
           description: "Subscription dish change",
           notes: { scheduleId },
           handler: async (razorpayResponse) => {

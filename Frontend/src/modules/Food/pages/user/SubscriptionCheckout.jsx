@@ -562,7 +562,7 @@ export default function SubscriptionCheckout() {
               "24-hour prior delivery notification before each meal",
               "Modify, skip, or confirm each delivery",
               "One-time secure checkout for this meal plan",
-              "No refunds on cancellation (ZiggyBites policy)",
+              "No refunds on cancellation (MymealBites policy)",
             ].map((feature) => (
               <li key={feature} className="flex items-start gap-3">
                 <CheckCircle2

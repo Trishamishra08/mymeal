@@ -1,5 +1,5 @@
 export const APP_CONFIG = {
-  NAME: 'ZiggyBites',
+  NAME: 'MymealBites',
   VERSION: '1.0.0',
 };
 
