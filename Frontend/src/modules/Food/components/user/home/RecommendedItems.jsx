@@ -86,7 +86,7 @@ function RecommendedDishCard({ item, fallbackLabel, handleAddHomeItemToCart }) {
           <button
             type="button"
             onClick={(event) => handleAddHomeItemToCart(event, item)}
-            className="ml-auto h-6 w-6 rounded-full bg-[#ef2b24] text-white flex items-center justify-center"
+            className="ml-auto h-6 w-6 rounded-full bg-[#D68B2A] text-white flex items-center justify-center transition-colors hover:bg-[#b57321]"
             aria-label={`Add ${item.name || "item"} to cart`}
           >
             <Plus className="h-4 w-4" />

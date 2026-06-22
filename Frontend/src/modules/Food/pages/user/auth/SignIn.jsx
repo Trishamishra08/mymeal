@@ -128,7 +128,7 @@ export default function SignIn() {
       <motion.div animate={floatingAnimation(1, 4.5, 15)} className="absolute top-32 left-8 md:left-24 text-green-500 opacity-50 drop-shadow-md">
         <Leaf className="w-10 h-10" />
       </motion.div>
-      <motion.div animate={floatingAnimation(2, 6, 25)} className="absolute bottom-40 right-10 md:right-40 text-red-400 opacity-70 drop-shadow-md">
+      <motion.div animate={floatingAnimation(2, 6, 25)} className="absolute bottom-40 right-10 md:right-40 text-[#1F6B3A]/80 opacity-70 drop-shadow-md">
         <MapPin className="w-14 h-14" />
       </motion.div>
       <motion.div animate={floatingAnimation(1.5, 5.5, 20)} className="absolute top-1/2 left-4 md:left-20 text-yellow-500 opacity-60 drop-shadow-md">
@@ -136,8 +136,8 @@ export default function SignIn() {
       </motion.div>
 
       {/* Support Icon */}
-      <Link to="/user/auth/support" className="absolute top-4 right-4 z-20 bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-sm text-gray-700 dark:text-gray-300 hover:text-[#E53935] border border-gray-200/60 dark:border-gray-700/60 transition-all flex items-center gap-1.5 font-bold text-[11px] uppercase tracking-wider">
-        <Info className="w-4 h-4 text-[#E53935]" />
+      <Link to="/user/auth/support" className="absolute top-4 right-4 z-20 bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-sm text-gray-700 dark:text-gray-300 hover:text-[#1F6B3A] border border-gray-200/60 dark:border-gray-700/60 transition-all flex items-center gap-1.5 font-bold text-[11px] uppercase tracking-wider">
+        <Info className="w-4 h-4 text-[#1F6B3A]" />
         <span>Support</span>
       </Link>
 
@@ -147,7 +147,7 @@ export default function SignIn() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5, type: "spring", bounce: 0.4 }}
-          className="w-32 h-32 rounded-full bg-gradient-to-br from-[#E53935] to-[#D32F2F] flex flex-col items-center justify-center shadow-[0_15px_35px_rgba(229,57,53,0.35)] border-4 border-white dark:border-gray-800 mb-8"
+          className="w-32 h-32 rounded-full bg-gradient-to-br from-[#1F6B3A] to-[#1F6B3A] flex flex-col items-center justify-center shadow-[0_15px_35px_rgba(229,57,53,0.35)] border-4 border-white dark:border-gray-800 mb-8"
         >
           <ChefHat className="w-12 h-12 text-white mb-1" />
           <span className="text-white font-black tracking-wider text-sm">INDIAN BITE</span>
@@ -178,7 +178,7 @@ export default function SignIn() {
           className="w-full space-y-6"
         >
           <div className="space-y-2 relative">
-            <div className={`relative flex items-center bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-md rounded-full p-2 pl-4 pr-2 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border ${error ? 'border-red-400' : 'border-white/60 dark:border-gray-700'} transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]`}>
+            <div className={`relative flex items-center bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-md rounded-full p-2 pl-4 pr-2 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border ${error ? 'border-[#1F6B3A]' : 'border-white/60 dark:border-gray-700'} transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]`}>
               {/* Country Code & Icon */}
               <div className="flex items-center gap-2 pr-3 border-r border-gray-200 dark:border-gray-700">
                 <span className="text-xl leading-none">🇮🇳</span>
@@ -206,7 +206,7 @@ export default function SignIn() {
             </div>
 
             {error && (
-              <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-center gap-1.5 text-sm text-red-500 font-medium absolute -bottom-6 w-full text-center">
+              <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-center gap-1.5 text-sm text-[#1F6B3A] font-medium absolute -bottom-6 w-full text-center">
                 <AlertCircle className="h-4 w-4" />
                 <span>{error}</span>
               </motion.div>
@@ -216,7 +216,7 @@ export default function SignIn() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full h-[56px] mt-4 rounded-full bg-gradient-to-r from-[#FF5252] to-[#E53935] text-white font-bold text-lg shadow-[0_10px_25px_rgba(229,57,53,0.4)] hover:shadow-[0_15px_35px_rgba(229,57,53,0.5)] hover:-translate-y-0.5 transition-all active:scale-[0.98] flex items-center justify-center disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[0_10px_25px_rgba(229,57,53,0.4)]"
+            className="w-full h-[56px] mt-4 rounded-full bg-gradient-to-r from-[#1F6B3A] to-[#1F6B3A] text-white font-bold text-lg shadow-[0_10px_25px_rgba(229,57,53,0.4)] hover:shadow-[0_15px_35px_rgba(229,57,53,0.5)] hover:-translate-y-0.5 transition-all active:scale-[0.98] flex items-center justify-center disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[0_10px_25px_rgba(229,57,53,0.4)]"
           >
             {isLoading ? (
               <Loader2 className="w-6 h-6 animate-spin" />

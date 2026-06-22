@@ -51,11 +51,11 @@ export default function BottomNavigation() {
               key={item.label}
               to={item.to}
               className={`flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
-                isActive ? "text-[#e32c31]" : "text-[#4f4b5c]"
+                isActive ? "text-[#1F6B3A]" : "text-[#4f4b5c]"
               }`}
             >
               <Icon
-                className={`h-5 w-5 ${isActive ? "fill-[#e32c31]/10" : ""}`}
+                className={`h-5 w-5 ${isActive ? "fill-[#1F6B3A]/10" : ""}`}
                 strokeWidth={isActive ? 2.8 : 2.2}
               />
               <span>{item.label}</span>

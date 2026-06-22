@@ -83,7 +83,7 @@ export default function FoodPreference() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className="bg-white dark:bg-[#111111] border border-orange-100 dark:border-white/10 rounded-[2rem] shadow-xl shadow-orange-100/60 dark:shadow-none px-5 py-6"
+          className="bg-white dark:bg-[#111111] border border-[#D68B2A]/20 dark:border-white/10 rounded-[2rem] shadow-xl shadow-[#D68B2A]/10 dark:shadow-none px-5 py-6"
         >
           {brand.logoUrl ? (
             <img
@@ -111,11 +111,11 @@ export default function FoodPreference() {
               const isSelected = selected === option.id
               const isHealthy = option.accent === "green"
               const selectedClasses = isHealthy
-                ? "border-green-500 bg-green-50/70 dark:bg-green-950/20"
-                : "border-orange-500 bg-orange-50/70 dark:bg-orange-950/20"
+                ? "border-[#1F6B3A] bg-[#1F6B3A]/10 dark:bg-green-950/20"
+                : "border-[#D68B2A] bg-[#D68B2A]/10 dark:bg-orange-950/20"
               const iconClasses = isHealthy
-                ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
-                : "bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-300"
+                ? "bg-[#1F6B3A]/20 text-[#1F6B3A] dark:bg-green-950 dark:text-green-300"
+                : "bg-[#D68B2A]/20 text-[#D68B2A] dark:bg-orange-950 dark:text-orange-300"
 
               return (
                 <button
@@ -128,7 +128,7 @@ export default function FoodPreference() {
                   className={`w-full text-left rounded-2xl border p-4 transition-all active:scale-[0.99] ${
                     isSelected
                       ? selectedClasses
-                      : "border-gray-200 bg-white hover:border-orange-200 dark:border-white/10 dark:bg-[#181818]"
+                      : "border-gray-200 bg-white hover:border-[#D68B2A]/30 dark:border-white/10 dark:bg-[#181818]"
                   }`}
                 >
                   <div className="flex items-start gap-4">
@@ -144,15 +144,15 @@ export default function FoodPreference() {
                           className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
                             isSelected
                               ? isHealthy
-                                ? "border-green-600"
-                                : "border-orange-500"
+                                ? "border-[#1F6B3A]"
+                                : "border-[#D68B2A]"
                               : "border-gray-300 dark:border-gray-600"
                           }`}
                         >
                           {isSelected && (
                             <span
                               className={`h-3 w-3 rounded-full ${
-                                isHealthy ? "bg-green-600" : "bg-orange-500"
+                                isHealthy ? "bg-[#1F6B3A]" : "bg-[#D68B2A]/100"
                               }`}
                             />
                           )}
@@ -163,7 +163,7 @@ export default function FoodPreference() {
                       </span>
                       <span
                         className={`mt-4 block text-[11px] font-black uppercase tracking-[0.22em] ${
-                          isHealthy ? "text-green-700" : "text-orange-500"
+                          isHealthy ? "text-[#1F6B3A]" : "text-[#D68B2A]"
                         }`}
                       >
                         {option.note}
@@ -176,7 +176,7 @@ export default function FoodPreference() {
           </div>
 
           <div className="mt-7 border-t border-gray-100 dark:border-white/10 pt-4 flex items-start gap-3">
-            <span className="h-8 w-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+            <span className="h-8 w-8 rounded-full bg-[#D68B2A]/10 text-[#D68B2A] flex items-center justify-center shrink-0">
               <Info className="h-4 w-4" />
             </span>
             <p className="text-xs font-medium leading-relaxed text-gray-500 dark:text-gray-400">
@@ -187,7 +187,7 @@ export default function FoodPreference() {
           <button
             type="button"
             onClick={() => savePreference()}
-            className="mt-5 h-12 w-full rounded-2xl bg-gradient-to-r from-[#ff4b1f] to-[#ff7a00] text-white font-black flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 active:scale-[0.98]"
+            className="mt-5 h-12 w-full rounded-2xl bg-gradient-to-r from-[#1F6B3A] to-[#D68B2A] text-white font-black flex items-center justify-center gap-2 shadow-lg shadow-[#1F6B3A]/20 active:scale-[0.98]"
           >
             Save and continue
             <ArrowRight className="h-5 w-5" />

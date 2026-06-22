@@ -1911,7 +1911,7 @@ export default function Home() {
     if (showBannerSkeleton) {
       return (
         <div className="px-0 md:px-4 py-2">
-          <HeroBannerSkeleton className="h-36 sm:h-44 lg:h-56 rounded-2xl" />
+          <HeroBannerSkeleton className={`h-36 sm:h-44 lg:h-56 ${isMobile ? 'rounded-none' : 'rounded-2xl'}`} />
         </div>
       );
     }
@@ -1923,7 +1923,7 @@ export default function Home() {
         <div
           ref={isMobile ? mobileHeroShellRef : heroShellRef}
           data-home-hero-shell="true"
-          className="relative w-full overflow-hidden aspect-[1.7/1] sm:aspect-[1.9/1] lg:aspect-[2.1/1] min-h-[180px] sm:min-h-[220px] lg:min-h-[260px] rounded-2xl shadow-sm group cursor-pointer bg-white"
+          className={`relative w-full overflow-hidden aspect-[1.7/1] sm:aspect-[1.9/1] lg:aspect-[2.1/1] min-h-[180px] sm:min-h-[220px] lg:min-h-[260px] shadow-sm group cursor-pointer bg-white ${isMobile ? 'rounded-none' : 'rounded-2xl'}`}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -2126,10 +2126,12 @@ export default function Home() {
   handleSearchFocus={handleSearchFocus} 
   vegMode={vegMode} 
   handleVegModeChange={handleVegModeChange} 
+  toggleRef={vegModeToggleRef}
 />
 
+          {renderHeroBannerSection(true)}
+
           <main className="px-5">
-            {renderHeroBannerSection(true)}
 
             <HomeCategories 
   loadingRealCategories={loadingRealCategories} 
@@ -2788,7 +2790,7 @@ export default function Home() {
                     setIsApplyingVegMode(false);
                   }, 2000);
                 }}
-                className="w-full bg-[#7e3866] text-white font-semibold py-2.5 rounded-xl hover:bg-[#55254b] transition-colors mb-2 text-sm">
+                className="w-full bg-[#1F6B3A] text-white font-semibold py-2.5 rounded-xl hover:bg-[#154c29] transition-colors mb-2 text-sm">
                 Apply
               </button>
             </motion.div>

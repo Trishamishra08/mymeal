@@ -38,8 +38,8 @@ export default function AdsBannerCarousel({ banners = [], data = [] }) {
   };
 
   return (
-    <div className="px-4 py-3 mb-2">
-      <div className="flex items-center justify-between mb-3">
+    <div className="py-3 mb-2">
+      <div className="flex items-center justify-between mb-3 px-4">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <Megaphone className="w-5 h-5 text-primary animate-pulse" />
           Sponsored Ads
@@ -59,11 +59,11 @@ export default function AdsBannerCarousel({ banners = [], data = [] }) {
       </div>
 
       <div 
-        className="relative w-full overflow-hidden h-[130px] sm:h-[160px] rounded-2xl shadow-md cursor-pointer group"
+        className="relative w-full overflow-hidden h-[130px] sm:h-[160px] shadow-md cursor-pointer group"
         onClick={handleBannerClick}
       >
         {/* Shimmer effect overlay */}
-        <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden rounded-2xl">
+        <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
           <motion.div
             animate={{
               x: ['-200%', '200%'],

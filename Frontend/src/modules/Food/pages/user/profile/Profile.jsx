@@ -552,37 +552,7 @@ export default function Profile() {
 
         {/* Account Options */}
         <div className="space-y-2 mb-3 mt-3">
-          <Link to="/user/wallet" className="block">
-            <motion.div
-              whileHover={{ x: 4, scale: 1.01 }}
-              transition={{ duration: 0.2, type: "spring", stiffness: 300 }}>
-              <Card className="bg-white dark:bg-[#1a1a1a] py-0 rounded-xl shadow-sm border-0 dark:border-gray-800 cursor-pointer">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <motion.div
-                      className="bg-gray-100 dark:bg-gray-800 rounded-full p-2"
-                      whileHover={{ rotate: 15, scale: 1.1 }}
-                      transition={{ duration: 0.3 }}>
-                      <Wallet className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                    </motion.div>
-                    <span className="text-base font-medium text-gray-900 dark:text-white">
-                      {companyName} Money
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-semibold text-green-600 dark:text-green-400">
-                      {"\u20B9"}{Number(walletBalance || 0).toFixed(0)}
-                    </span>
-                    <motion.div
-                      whileHover={{ x: 4 }}
-                      transition={{ duration: 0.2 }}>
-                      <ChevronRight className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                    </motion.div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Link>
+
 
           <Link to="/user/profile/coupons" className="block">
             <motion.div
@@ -1131,19 +1101,19 @@ export default function Profile() {
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <motion.div
-                      className="bg-red-50 dark:bg-red-900/20 rounded-full p-2"
+                      className="bg-green-50 dark:bg-green-900/20 rounded-full p-2"
                       whileHover={{ rotate: 15, scale: 1.1 }}
                       transition={{ duration: 0.3 }}>
-                      <Trash2 className="h-5 w-5 text-red-500" />
+                      <Trash2 className="h-5 w-5 text-green-600" />
                     </motion.div>
-                    <span className="text-base font-medium text-red-500">
+                    <span className="text-base font-medium text-green-600">
                       Delete Account
                     </span>
                   </div>
                   <motion.div
                     whileHover={{ x: 4 }}
                     transition={{ duration: 0.2 }}>
-                    <ChevronRight className="h-5 w-5 text-red-300" />
+                    <ChevronRight className="h-5 w-5 text-green-400" />
                   </motion.div>
                 </CardContent>
               </Card>
@@ -1414,14 +1384,14 @@ export default function Profile() {
             {deleteStep === 1 && (
               <div className="p-5">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-red-100 dark:bg-red-900/30 rounded-full p-2.5">
-                    <AlertTriangle className="h-6 w-6 text-red-500" />
+                  <div className="bg-green-100 dark:bg-green-900/30 rounded-full p-2.5">
+                    <AlertTriangle className="h-6 w-6 text-green-600" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Account?</h3>
                 </div>
-                <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-3.5 mb-4 border border-red-100 dark:border-red-900/30">
-                  <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">⚠️ This action is permanent and cannot be undone!</p>
-                  <ul className="text-xs text-red-500/80 dark:text-red-400/70 space-y-1.5">
+                <div className="bg-green-50 dark:bg-green-900/10 rounded-xl p-3.5 mb-4 border border-green-100 dark:border-green-900/30">
+                  <p className="text-sm font-semibold text-green-700 dark:text-green-500 mb-2">⚠️ This action is permanent and cannot be undone!</p>
+                  <ul className="text-xs text-green-600/90 dark:text-green-500/80 space-y-1.5">
                     <li>• Your profile, addresses, and preferences will be deleted</li>
                     <li>• Wallet balance will be forfeited</li>
                     <li>• Order history will be anonymized</li>
@@ -1437,7 +1407,7 @@ export default function Profile() {
                     Cancel
                   </Button>
                   <Button
-                    className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white"
+                    className="flex-1 rounded-xl bg-green-600 hover:bg-green-700 text-white"
                     onClick={() => setDeleteStep(2)}>
                     Continue
                   </Button>
@@ -1448,13 +1418,13 @@ export default function Profile() {
             {deleteStep === 2 && (
               <div className="p-5">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Confirm Deletion</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Type <span className="font-bold text-red-500">DELETE MY ACCOUNT</span> to confirm.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Type <span className="font-bold text-green-600">DELETE MY ACCOUNT</span> to confirm.</p>
                 <input
                   type="text"
                   value={deleteCaptcha}
                   onChange={(e) => setDeleteCaptcha(e.target.value)}
                   placeholder="Type here..."
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-400 mb-4"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500 mb-4"
                   autoFocus
                   autoComplete="off"
                 />
@@ -1466,7 +1436,7 @@ export default function Profile() {
                     Back
                   </Button>
                   <Button
-                    className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex-1 rounded-xl bg-green-600 hover:bg-green-700 text-white disabled:opacity-40 disabled:cursor-not-allowed"
                     disabled={deleteCaptcha.trim() !== "DELETE MY ACCOUNT" || isDeleting}
                     onClick={handleDeleteAccount}>
                     {isDeleting ? "Deleting..." : "Delete Forever"}

@@ -324,11 +324,11 @@ export default function UnifiedOTPFastLogin() {
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden font-['Poppins'] text-[#202030]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-8 top-14 h-8 w-8 rounded-full border border-red-100 opacity-70" />
-        <div className="absolute right-10 top-24 h-5 w-5 rotate-12 rounded border border-red-100 opacity-60" />
-        <div className="absolute left-6 top-44 h-4 w-4 rotate-45 rounded-sm border border-red-100 opacity-60" />
-        <div className="absolute bottom-0 left-0 right-0 h-28 bg-red-50" style={{ clipPath: "polygon(0 60%, 18% 78%, 38% 67%, 58% 84%, 78% 62%, 100% 48%, 100% 100%, 0 100%)" }} />
-        <div className="absolute bottom-0 left-0 right-0 h-20 bg-[#ff1f1f]" style={{ clipPath: "polygon(0 82%, 22% 70%, 46% 84%, 70% 64%, 100% 42%, 100% 100%, 0 100%)" }} />
+        <div className="absolute left-8 top-14 h-8 w-8 rounded-full border border-[#1F6B3A]/20 opacity-70" />
+        <div className="absolute right-10 top-24 h-5 w-5 rotate-12 rounded border border-[#1F6B3A]/20 opacity-60" />
+        <div className="absolute left-6 top-44 h-4 w-4 rotate-45 rounded-sm border border-[#1F6B3A]/20 opacity-60" />
+        <div className="absolute bottom-0 left-0 right-0 h-28 bg-[#1F6B3A]/10" style={{ clipPath: "polygon(0 60%, 18% 78%, 38% 67%, 58% 84%, 78% 62%, 100% 48%, 100% 100%, 0 100%)" }} />
+        <div className="absolute bottom-0 left-0 right-0 h-20 bg-[#1F6B3A]" style={{ clipPath: "polygon(0 82%, 22% 70%, 46% 84%, 70% 64%, 100% 42%, 100% 100%, 0 100%)" }} />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-sm flex-col px-7 pb-24 pt-10">
@@ -348,15 +348,15 @@ export default function UnifiedOTPFastLogin() {
                   onError={() => setBrand((prev) => ({ ...prev, logoUrl: null }))}
                 />
               ) : (
-                <div className="flex h-28 w-28 items-center justify-center rounded-full bg-red-50 text-5xl font-black text-[#ff1f1f]">
+                <div className="flex h-28 w-28 items-center justify-center rounded-full bg-[#1F6B3A]/10 text-5xl font-black text-[#1F6B3A]">
                   {(brand.companyName || "Z").trim().charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
-            <h1 className="text-4xl font-black italic tracking-tight text-[#ff1f1f] drop-shadow-sm">
+            <h1 className="text-4xl font-black italic tracking-tight text-[#1F6B3A] drop-shadow-sm">
               {brand.companyName || "ZiggyBites"}
             </h1>
-            <div className="mx-auto mt-2 h-1 w-16 rounded-full bg-[#ff1f1f]" />
+            <div className="mx-auto mt-2 h-1 w-16 rounded-full bg-[#1F6B3A]" />
           </div>
 
           <div className="mt-8">
@@ -372,7 +372,7 @@ export default function UnifiedOTPFastLogin() {
                 >
                   <div className="relative rounded-xl bg-white shadow-[0_8px_28px_rgba(15,23,42,0.08)] ring-1 ring-gray-100">
                     <div className="absolute inset-y-0 left-4 flex items-center">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-[#ff1f1f]">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1F6B3A]/10 text-[#1F6B3A]">
                         <Phone className="h-4 w-4" />
                       </span>
                     </div>
@@ -395,20 +395,20 @@ export default function UnifiedOTPFastLogin() {
                   </div>
 
                   <label className="flex items-center gap-2 text-[10px] font-semibold text-[#5f5f6f]">
-                    <input type="checkbox" defaultChecked className="h-3.5 w-3.5 rounded border-red-200 accent-[#ff2727]" />
+                    <input type="checkbox" defaultChecked className="h-3.5 w-3.5 rounded border-[#1F6B3A]/30 accent-[#1F6B3A]" />
                     Remember me for faster sign-in
                   </label>
 
                   <button
                     type="submit"
                     disabled={loading || phoneNumber.length < 10}
-                    className="relative flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#ef1f1f] to-[#ff641f] text-sm font-black text-white shadow-[0_12px_24px_rgba(255,49,31,0.25)] transition active:scale-[0.98] disabled:opacity-60"
+                    className="relative flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#1F6B3A] to-[#D68B2A] text-sm font-black text-white shadow-[0_12px_24px_rgba(255,49,31,0.25)] transition active:scale-[0.98] disabled:opacity-60"
                   >
                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Continue"}
                     {!loading && <ArrowRight className="absolute right-5 h-4 w-4" />}
                   </button>
 
-                  <div className="grid grid-cols-2 gap-3 pt-1">
+                  {/* <div className="grid grid-cols-2 gap-3 pt-1">
                     <button
                       type="button"
                       className="flex h-11 items-center justify-center gap-2 rounded-xl border border-gray-100 bg-white text-xs font-black text-[#202030] shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition active:scale-[0.98]"
@@ -423,7 +423,7 @@ export default function UnifiedOTPFastLogin() {
                       <SiGmail className="h-5 w-5 shrink-0 text-[#ea4335]" />
                       <span>Gmail</span>
                     </button>
-                  </div>
+                  </div> */}
                 </motion.form>
               ) : (
                 <motion.form
@@ -455,22 +455,22 @@ export default function UnifiedOTPFastLogin() {
                           }
                         }}
                         onPaste={index === 0 ? handleOtpPaste : undefined}
-                        className="h-14 w-full rounded-xl bg-white text-center text-2xl font-black text-[#202030] shadow-[0_8px_28px_rgba(15,23,42,0.08)] ring-1 ring-gray-100 outline-none focus:ring-[#ff2727]"
+                        className="h-14 w-full rounded-xl bg-white text-center text-2xl font-black text-[#202030] shadow-[0_8px_28px_rgba(15,23,42,0.08)] ring-1 ring-gray-100 outline-none focus:ring-[#1F6B3A]"
                       />
                     ))}
                   </div>
                   <div className="text-center text-[11px] font-semibold">
                     {resendTimer > 0 ? (
-                      <span className="text-gray-400">Resend code in <span className="text-[#ff2727]">{formatResendTimer(resendTimer)}</span></span>
+                      <span className="text-gray-400">Resend code in <span className="text-[#1F6B3A]">{formatResendTimer(resendTimer)}</span></span>
                     ) : (
-                      <button type="button" onClick={handleResendOTP} className="text-[#ff2727]">Resend code</button>
+                      <button type="button" onClick={handleResendOTP} className="text-[#1F6B3A]">Resend code</button>
                     )}
                     <button type="button" onClick={handleEditNumber} className="ml-4 text-gray-400">Edit number</button>
                   </div>
                   <button
                     type="submit"
                     disabled={loading || otp.length < 4}
-                    className="flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#ef1f1f] to-[#ff641f] text-sm font-black text-white shadow-[0_12px_24px_rgba(255,49,31,0.25)] transition active:scale-[0.98] disabled:opacity-60"
+                    className="flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#1F6B3A] to-[#D68B2A] text-sm font-black text-white shadow-[0_12px_24px_rgba(255,49,31,0.25)] transition active:scale-[0.98] disabled:opacity-60"
                   >
                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Verify & Continue"}
                   </button>
@@ -481,25 +481,25 @@ export default function UnifiedOTPFastLogin() {
 
           <p className="mx-auto mt-5 max-w-[260px] text-center text-[9px] font-semibold leading-4 text-gray-400">
             By continuing, you agree to our<br />
-            <Link to="/food/user/profile/terms" className="font-black text-[#ff2727] underline">Terms of Service</Link>
+            <Link to="/food/user/profile/terms" className="font-black text-[#1F6B3A] underline">Terms of Service</Link>
             <span> • </span>
-            <Link to="/food/user/profile/privacy" className="font-black text-[#ff2727] underline">Privacy Policy</Link>
+            <Link to="/food/user/profile/privacy" className="font-black text-[#1F6B3A] underline">Privacy Policy</Link>
             <span> • </span>
-            <Link to="/food/user/profile/cancellation" className="font-black text-[#ff2727] underline">Content Policy</Link>
+            <Link to="/food/user/profile/cancellation" className="font-black text-[#1F6B3A] underline">Content Policy</Link>
           </p>
         </motion.div>
       </div>
 
       <div className="hidden">
       {/* Decorative Background Elements */}
-      <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-[#7e3866]/10 via-[#7e3866]/5 to-transparent pointer-events-none" />
-      <div className="absolute top-[-100px] right-[-100px] w-[500px] h-[500px] bg-[#7e3866]/5 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-      <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] bg-[#7e3866]/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-[#1F6B3A]/10 via-[#1F6B3A]/5 to-transparent pointer-events-none" />
+      <div className="absolute top-[-100px] right-[-100px] w-[500px] h-[500px] bg-[#1F6B3A]/5 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] bg-[#1F6B3A]/5 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Main Content */}
       <div className="absolute top-6 right-6 z-20">
         <Link to="/user/auth/support">
-          <Button variant="ghost" className="text-gray-500 hover:text-[#7e3866] font-semibold flex items-center gap-2">
+          <Button variant="ghost" className="text-gray-500 hover:text-[#1F6B3A] font-semibold flex items-center gap-2">
             <ShieldQuestion className="w-5 h-5" />
             Support
           </Button>
@@ -529,7 +529,7 @@ export default function UnifiedOTPFastLogin() {
                   onError={() => setBrand((prev) => ({ ...prev, logoUrl: null }))}
                 />
               ) : (
-                <div className="w-40 h-40 md:w-48 md:h-48 mx-auto rounded-full bg-[#7e3866]/10 text-[#7e3866] flex items-center justify-center text-5xl md:text-6xl font-black">
+                <div className="w-40 h-40 md:w-48 md:h-48 mx-auto rounded-full bg-[#1F6B3A]/10 text-[#1F6B3A] flex items-center justify-center text-5xl md:text-6xl font-black">
                   {(brand.companyName || "Z").trim().charAt(0).toUpperCase()}
                 </div>
               )}
@@ -547,13 +547,13 @@ export default function UnifiedOTPFastLogin() {
 
           {/* Login Card */}
           <div className="bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-2xl rounded-[3rem] p-8 sm:p-12 shadow-[0_40px_80px_-20px_rgba(126,56,102,0.2)] dark:shadow-none border border-white/20 dark:border-gray-800 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#7e3866]/20 to-transparent" />
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#1F6B3A]/20 to-transparent" />
 
             <div className="mb-10 text-center sm:text-left">
               <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2 font-['Outfit'] tracking-tight">
                 {step === 1 ? "Welcome Back" : "Security Check"}
               </h2>
-              <div className="h-1 w-10 bg-[#7e3866] rounded-full mb-3 hidden sm:block" />
+              <div className="h-1 w-10 bg-[#1F6B3A] rounded-full mb-3 hidden sm:block" />
               <p className="text-base text-gray-500 dark:text-gray-400 font-medium">
                 {step === 1
                   ? "Enter your details to access your account"
@@ -573,7 +573,7 @@ export default function UnifiedOTPFastLogin() {
                 >
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                      <span className="text-sm font-bold text-[#7e3866] border-r border-gray-200 dark:border-gray-800 pr-3">+91</span>
+                      <span className="text-sm font-bold text-[#1F6B3A] border-r border-gray-200 dark:border-gray-800 pr-3">+91</span>
                     </div>
                     <input
                       type="tel"
@@ -582,7 +582,7 @@ export default function UnifiedOTPFastLogin() {
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
                       maxLength={10}
-                      className="block w-full pl-16 pr-6 py-4 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white border-2 border-transparent focus:border-[#7e3866]/50 rounded-2xl outline-none transition-all placeholder:text-gray-300 font-bold text-lg shadow-sm"
+                      className="block w-full pl-16 pr-6 py-4 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white border-2 border-transparent focus:border-[#1F6B3A]/50 rounded-2xl outline-none transition-all placeholder:text-gray-300 font-bold text-lg shadow-sm"
                       placeholder="Phone number"
                     />
                   </div>
@@ -590,7 +590,7 @@ export default function UnifiedOTPFastLogin() {
                   <button
                     type="submit"
                     disabled={loading || phoneNumber.length < 10}
-                    className="w-full py-4.5 bg-[#7e3866] hover:bg-[#6a2f56] disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white rounded-2xl font-bold text-lg shadow-xl shadow-[#7e3866]/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group overflow-hidden relative"
+                    className="w-full py-4.5 bg-[#1F6B3A] hover:bg-[#1F6B3A] disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white rounded-2xl font-bold text-lg shadow-xl shadow-[#1F6B3A]/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group overflow-hidden relative"
                   >
                     {loading ? (
                       <Loader2 className="w-6 h-6 animate-spin" />
@@ -634,7 +634,7 @@ export default function UnifiedOTPFastLogin() {
                           }
                         }}
                         onPaste={index === 0 ? handleOtpPaste : undefined}
-                        className="w-full h-16 text-center text-3xl font-bold bg-gray-50 dark:bg-gray-900 border-2 border-transparent focus:border-[#7e3866]/50 rounded-2xl outline-none transition-all text-gray-900 dark:text-white shadow-sm"
+                        className="w-full h-16 text-center text-3xl font-bold bg-gray-50 dark:bg-gray-900 border-2 border-transparent focus:border-[#1F6B3A]/50 rounded-2xl outline-none transition-all text-gray-900 dark:text-white shadow-sm"
                         placeholder="•"
                       />
                     ))}
@@ -643,12 +643,12 @@ export default function UnifiedOTPFastLogin() {
                   <div className="flex flex-col items-center gap-4">
                     <div className="flex items-center gap-2 text-xs font-semibold">
                       {resendTimer > 0 ? (
-                        <span className="text-gray-400">Resend code in <span className="text-[#7e3866]">{formatResendTimer(resendTimer)}</span></span>
+                        <span className="text-gray-400">Resend code in <span className="text-[#1F6B3A]">{formatResendTimer(resendTimer)}</span></span>
                       ) : (
                         <button
                           type="button"
                           onClick={handleResendOTP}
-                          className="text-[#7e3866] hover:underline"
+                          className="text-[#1F6B3A] hover:underline"
                         >
                           Didn't receive code? Resend
                         </button>
@@ -658,7 +658,7 @@ export default function UnifiedOTPFastLogin() {
                     <button
                       type="button"
                       onClick={handleEditNumber}
-                      className="text-xs text-gray-400 hover:text-[#7e3866] transition-colors"
+                      className="text-xs text-gray-400 hover:text-[#1F6B3A] transition-colors"
                     >
                       Edit phone number
                     </button>
@@ -667,7 +667,7 @@ export default function UnifiedOTPFastLogin() {
                   <button
                     type="submit"
                     disabled={loading || otp.length < 4}
-                    className="w-full py-4.5 bg-[#7e3866] hover:bg-[#6a2f56] disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white rounded-2xl font-bold text-lg shadow-xl shadow-[#7e3866]/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                    className="w-full py-4.5 bg-[#1F6B3A] hover:bg-[#1F6B3A] disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white rounded-2xl font-bold text-lg shadow-xl shadow-[#1F6B3A]/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                   >
                     {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Verify & Continue"}
                   </button>
@@ -680,7 +680,7 @@ export default function UnifiedOTPFastLogin() {
           <div className="mt-8 text-center">
             <p className="text-[11px] text-gray-400 font-medium leading-relaxed max-w-[320px] mx-auto">
               By continuing, you agree to our <br />
-              <Link to="/food/user/profile/terms" className="text-gray-900 dark:text-white font-bold hover:text-[#7e3866] transition-colors">Terms of Service</Link> & <Link to="/food/user/profile/privacy" className="text-gray-900 dark:text-white font-bold hover:text-[#7e3866] transition-colors">Privacy Policy</Link>
+              <Link to="/food/user/profile/terms" className="text-gray-900 dark:text-white font-bold hover:text-[#1F6B3A] transition-colors">Terms of Service</Link> & <Link to="/food/user/profile/privacy" className="text-gray-900 dark:text-white font-bold hover:text-[#1F6B3A] transition-colors">Privacy Policy</Link>
             </p>
           </div>
 
@@ -705,7 +705,7 @@ export default function UnifiedOTPFastLogin() {
           className="sm:max-w-[425px] rounded-3xl border-none p-0 overflow-hidden bg-white dark:bg-[#1a1a1a]"
           showCloseButton={false}
         >
-          <div className="bg-[#7e3866] p-8 text-center relative">
+          <div className="bg-[#1F6B3A] p-8 text-center relative">
             <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-white/10 rounded-full blur-2xl" />
             <motion.div
               initial={{ scale: 0 }}
@@ -731,7 +731,7 @@ export default function UnifiedOTPFastLogin() {
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Enter your name"
-                  className="pl-4 h-14 bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-[#7e3866] transition-all group-hover:border-[#7e3866]/30"
+                  className="pl-4 h-14 bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-[#1F6B3A] transition-all group-hover:border-[#1F6B3A]/30"
                   autoFocus
                 />
               </div>
@@ -741,7 +741,7 @@ export default function UnifiedOTPFastLogin() {
               <Button
                 type="submit"
                 disabled={isUpdatingName}
-                className="w-full h-14 bg-[#7e3866] hover:bg-[#6b2f57] text-white rounded-2xl font-bold text-lg shadow-lg shadow-[#7e3866]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full h-14 bg-[#1F6B3A] hover:bg-[#1F6B3A] text-white rounded-2xl font-bold text-lg shadow-lg shadow-[#1F6B3A]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 {isUpdatingName ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
