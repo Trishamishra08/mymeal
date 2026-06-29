@@ -29,7 +29,5 @@ export const validateConfig = () => {
         process.exit(1);
     }
 
-    if (!config.petpoojaAppKey || !config.petpoojaAppSecret) {
-        logger.warn('Petpooja API Keys are not configured. Petpooja sync will fail if enabled for a restaurant.');
-    }
+
 };

@@ -40,6 +40,7 @@ export const adminSidebarMenu = [
     type: "section",
     label: "FOOD MANAGEMENT",
     items: [
+/*
       {
         type: "link",
         label: "Food Approval",
@@ -55,6 +56,7 @@ export const adminSidebarMenu = [
           { label: "Restaurant Addons List", path: "/admin/food/addons" },
         ],
       },
+*/
       {
         type: "expandable",
         label: "Categories",
@@ -73,6 +75,7 @@ export const adminSidebarMenu = [
         path: "/admin/food/zone-setup",
         icon: "MapPin",
       },
+/*
       {
         type: "link",
         label: "Zone Ranking",
@@ -93,6 +96,7 @@ export const adminSidebarMenu = [
           { label: "Restaurant Complaints", path: "/admin/food/restaurants/complaints" },
         ],
       },
+*/
     ],
   },
   {
@@ -165,7 +169,7 @@ export const adminSidebarMenu = [
     items: [
       {
         type: "link",
-        label: "Restaurant Coupons & Offers",
+        label: "Coupons & Offers",
         path: "/admin/food/coupons",
         icon: "Gift",
       },
@@ -200,9 +204,9 @@ export const adminSidebarMenu = [
     type: "section",
     label: "DELIVERYMAN MANAGEMENT",
     items: [
-      { type: "link", label: "Delivery Cash Limit", path: "/admin/food/delivery-cash-limit", icon: "IndianRupee" },
+      /* { type: "link", label: "Delivery Cash Limit", path: "/admin/food/delivery-cash-limit", icon: "IndianRupee" }, */
       { type: "link", label: "Delivery & Platform Fee", path: "/admin/food/fee-settings", icon: "DollarSign" },
-      { type: "link", label: "Cash limit settlement", path: "/admin/food/cash-limit-settlement", icon: "Receipt" },
+      /* { type: "link", label: "Cash limit settlement", path: "/admin/food/cash-limit-settlement", icon: "Receipt" }, */
       { type: "link", label: "Delivery Withdrawal", path: "/admin/food/delivery-withdrawal", icon: "Wallet" },
       { type: "link", label: "Delivery boy Wallet", path: "/admin/food/delivery-boy-wallet", icon: "PiggyBank" },
       { type: "link", label: "Delivery Boy Commission", path: "/admin/food/delivery-boy-commission", icon: "DollarSign" },
@@ -239,12 +243,14 @@ export const adminSidebarMenu = [
       { type: "link", label: "Transaction Report", path: "/admin/food/transaction-report", icon: "FileText" },
       { type: "link", label: "Order Report", path: "/admin/food/order-report/regular", icon: "FileText" },
       { type: "link", label: "Tax Report", path: "/admin/food/tax-report", icon: "Receipt" },
+      /*
       {
         type: "expandable",
         label: "Restaurant Report",
         icon: "FileText",
         subItems: [{ label: "Restaurant Report", path: "/admin/food/restaurant-report" }],
       },
+      */
       {
         type: "expandable",
         label: "Customer Report",
@@ -257,14 +263,14 @@ export const adminSidebarMenu = [
     type: "section",
     label: "TRANSACTION MANAGEMENT",
     items: [
-      { type: "link", label: "Restaurant Withdraws", path: "/admin/food/restaurant-withdraws", icon: "CreditCard" },
+      /* { type: "link", label: "Restaurant Withdraws", path: "/admin/food/restaurant-withdraws", icon: "CreditCard" }, */
     ],
   },
   {
     type: "section",
     label: "BANNER SETTINGS",
     items: [
-      { type: "link", label: "App Intro & Ads", path: "/admin/food/app-intro-ads", icon: "Image" },
+      /* { type: "link", label: "App Intro & Ads", path: "/admin/food/app-intro-ads", icon: "Image" }, */
       { type: "link", label: "Landing Page Management", path: "/admin/food/hero-banner-management", icon: "Image" },
     ],
   },
@@ -281,7 +287,7 @@ export const adminSidebarMenu = [
     type: "section",
     label: "SYSTEM SETTINGS",
     items: [
-      { type: "link", label: "Env Managements", path: "/admin/food/env-managements", icon: "Database" },
+      /* { type: "link", label: "Env Managements", path: "/admin/food/env-managements", icon: "Database" }, */
       { type: "link", label: "Broadcast Notification", path: "/admin/food/broadcast-notification", icon: "Bell" },
       { type: "link", label: "Toggle Management", path: "/admin/food/toggle-management", icon: "ToggleLeft" },
       { type: "link", label: "Business Setup", path: "/admin/food/business-setup", icon: "Settings" },
