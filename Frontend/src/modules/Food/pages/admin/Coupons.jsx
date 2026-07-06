@@ -24,8 +24,6 @@ export default function Coupons() {
     discountType: "percentage",
     discountValue: "",
     customerScope: "all",
-    restaurantScope: "all",
-    restaurantId: "",
     endDate: "",
     startDate: "",
     minOrderValue: "",
@@ -58,28 +56,7 @@ export default function Coupons() {
     fetchOffers()
   }, [fetchOffers])
 
-  useEffect(() => {
-    const fetchRestaurants = async () => {
-      try {
-        const response = await adminAPI.getRestaurants({ page: 1, limit: 200 })
-        if (response?.data?.success) {
-          const list = response?.data?.data?.restaurants || []
-          // Backend returns `restaurantName`; normalize to `name` for this dropdown without affecting other pages.
-          const normalized = Array.isArray(list)
-            ? list.map((r) => ({
-              ...r,
-              name: r?.name || r?.restaurantName || "",
-            }))
-            : []
-          setRestaurants(normalized)
-        }
-      } catch (err) {
-        debugError("Error fetching restaurants:", err)
-      }
-    }
-
-    fetchRestaurants()
-  }, [])
+  // Restaurant fetching removed for single kitchen
 
   const todayYMD = () => {
     const d = new Date()
@@ -166,8 +143,6 @@ export default function Coupons() {
       discountType: "percentage",
       discountValue: "",
       customerScope: "all",
-      restaurantScope: "all",
-      restaurantId: "",
       endDate: "",
       startDate: "",
       minOrderValue: "",
@@ -199,10 +174,7 @@ export default function Coupons() {
       return
     }
 
-    if (formData.restaurantScope === "selected" && !formData.restaurantId) {
-      setSubmitError("Please select a restaurant")
-      return
-    }
+
 
     try {
       setIsSubmitting(true)
@@ -211,8 +183,6 @@ export default function Coupons() {
         discountType: formData.discountType,
         discountValue: parsedDiscountValue,
         customerScope: formData.customerScope,
-        restaurantScope: formData.restaurantScope,
-        restaurantId: formData.restaurantScope === "selected" ? formData.restaurantId : undefined,
         endDate: formData.endDate || undefined,
         startDate: formData.startDate || undefined,
         minOrderValue: formData.minOrderValue !== "" ? Number(formData.minOrderValue) : undefined,
@@ -362,18 +332,6 @@ export default function Coupons() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Restaurant Scope</label>
-                  <select
-                    value={formData.restaurantScope}
-                    onChange={(e) => handleFormChange("restaurantScope", e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">All Restaurants</option>
-                    <option value="selected">Selected Restaurant</option>
-                  </select>
-                </div>
-
-                <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Expiry Date (Optional)</label>
                   <input
                     type="date"
@@ -464,24 +422,6 @@ export default function Coupons() {
                 />
                 <label htmlFor="isFirstOrderOnly" className="text-sm text-slate-700">First order only</label>
               </div>
-
-                {formData.restaurantScope === "selected" && (
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Select Restaurant</label>
-                    <select
-                      value={formData.restaurantId}
-                      onChange={(e) => handleFormChange("restaurantId", e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Choose a restaurant</option>
-                      {restaurants.map((restaurant) => (
-                        <option key={restaurant._id} value={restaurant._id}>
-                          {restaurant.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
               </div>
 
               {(submitError || submitSuccess) && (
@@ -549,7 +489,7 @@ export default function Coupons() {
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">SI</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Restaurant</th>
+
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Dish</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Coupon Code</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Customer Scope</th>
@@ -569,11 +509,7 @@ export default function Coupons() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm font-medium text-slate-700">{offer.sl}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-slate-900">
-                          {offer.restaurantScope === "all" || offer.restaurantName === "All Restaurants" ? "All Restaurants" : offer.restaurantName}
-                        </span>
-                      </td>
+
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
                           {offer.dishName}

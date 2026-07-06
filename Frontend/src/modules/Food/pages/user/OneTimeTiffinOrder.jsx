@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, ChevronDown, Loader2, MapPin, Minus, Plus, ShieldCheck, Clock, Circle, ChevronRight, Home, Edit2, Leaf, RotateCcw, Utensils, Sparkles, Info, Lock, Truck, Package } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronDown, Loader2, MapPin, Minus, Plus, ShieldCheck, Clock, Circle, ChevronRight, Home, Edit2, Leaf, RotateCcw, Utensils, Sparkles, Info, Lock, Truck, Package, Tag, TicketPercent, X } from "lucide-react";
 import { toast } from "sonner";
-import { orderAPI } from "@food/api";
+import { orderAPI, restaurantAPI, adminAPI } from "@food/api";
 import { useProfile } from "@food/context/ProfileContext";
 import { initRazorpayPayment } from "@food/utils/razorpay";
 import { getCompanyNameAsync } from "@food/utils/businessSettings";
@@ -41,22 +41,57 @@ export default function OneTimeTiffinOrder() {
   const [appCustomization, setAppCustomization] = useState(DEFAULT_APP_CUSTOMIZATION);
   const [note, setNote] = useState("");
   const { location } = useLocation();
+  const [offers, setOffers] = useState([]);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponCodeInput, setCouponCodeInput] = useState("");
+  const [showOffers, setShowOffers] = useState(false);
+  const [feeSettings, setFeeSettings] = useState({
+    deliveryFee: 25,
+    deliveryFeeRanges: [],
+    freeDeliveryUpTo: 0,
+    freeDeliveryThreshold: 149,
+    platformFee: 5,
+    packagingFee: 0,
+    gstRate: 5,
+    gstOnDeliveryFee: 0,
+    gstOnPlatformFee: 0,
+    gstOnPackagingFee: 0,
+  });
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       try {
         setLoading(true);
-        const [menuResponse, settings] = await Promise.all([
+        const [menuResponse, settings, offersResponse, feeSettingsResponse] = await Promise.all([
           orderAPI.getOneTimeTiffinMenu(),
           loadAppCustomization().catch(() => DEFAULT_APP_CUSTOMIZATION),
+          restaurantAPI.getPublicOffers().catch(() => ({ data: { data: { allOffers: [] } } })),
+          adminAPI.getPublicFeeSettings().catch(() => null)
         ]);
         if (!mounted) return;
         const data = menuResponse?.data?.data || {};
         const categories = Array.isArray(data.categories) ? data.categories : [];
+        const fetchedOffers = offersResponse?.data?.data?.allOffers || offersResponse?.data?.allOffers || [];
+        setOffers(fetchedOffers);
         setMenu({ ...data, categories });
         setAppCustomization(settings);
         setTiffins([{ selections: buildDefaultSelections(categories) }]);
+
+        if (feeSettingsResponse?.data?.success && feeSettingsResponse?.data?.data?.feeSettings) {
+          setFeeSettings({
+            deliveryFee: feeSettingsResponse.data.data.feeSettings.deliveryFee ?? 25,
+            deliveryFeeRanges: feeSettingsResponse.data.data.feeSettings.deliveryFeeRanges ?? [],
+            freeDeliveryUpTo: feeSettingsResponse.data.data.feeSettings.freeDeliveryUpTo ?? 0,
+            freeDeliveryThreshold: feeSettingsResponse.data.data.feeSettings.freeDeliveryThreshold ?? 149,
+            platformFee: feeSettingsResponse.data.data.feeSettings.platformFee ?? 5,
+            packagingFee: feeSettingsResponse.data.data.feeSettings.packagingFee ?? 0,
+            gstRate: feeSettingsResponse.data.data.feeSettings.gstRate ?? 5,
+            gstOnDeliveryFee: feeSettingsResponse.data.data.feeSettings.gstOnDeliveryFee ?? 0,
+            gstOnPlatformFee: feeSettingsResponse.data.data.feeSettings.gstOnPlatformFee ?? 0,
+            gstOnPackagingFee: feeSettingsResponse.data.data.feeSettings.gstOnPackagingFee ?? 0,
+          });
+        }
       } catch (error) {
         toast.error(error?.response?.data?.message || "Failed to load today's tiffin menu.");
       } finally {
@@ -71,9 +106,38 @@ export default function OneTimeTiffinOrder() {
 
   const categories = menu?.categories || [];
   const unitPrice = Number(menu?.price || 0);
-  const deliveryFee = Number(menu?.deliveryFee || 0);
   const totalAmount = unitPrice * quantity;
-  const finalAmount = totalAmount + deliveryFee;
+  
+  const fallbackDeliveryFee = (() => {
+    const freeUpTo = Number(feeSettings.freeDeliveryUpTo || 0);
+    if (Number.isFinite(freeUpTo) && freeUpTo > 0 && totalAmount >= freeUpTo) return 0;
+    if (totalAmount >= feeSettings.freeDeliveryThreshold) return 0;
+    return Number(feeSettings.deliveryFee || 0);
+  })();
+
+  const deliveryFee = fallbackDeliveryFee;
+  const platformFee = Number(feeSettings.platformFee || 0);
+  const packagingFee = Number(feeSettings.packagingFee || 0);
+
+  const gstOnItemTotal = totalAmount * (Number(feeSettings.gstRate || 0) / 100);
+  const gstOnDeliveryFee = deliveryFee * (Number(feeSettings.gstOnDeliveryFee || 0) / 100);
+  const gstOnPlatformFee = platformFee * (Number(feeSettings.gstOnPlatformFee || 0) / 100);
+  const gstOnPackagingFee = packagingFee * (Number(feeSettings.gstOnPackagingFee || 0) / 100);
+  const tax = Math.round(gstOnItemTotal + gstOnDeliveryFee + gstOnPlatformFee + gstOnPackagingFee);
+
+  let couponDiscount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.discountType === "flat-price") {
+      couponDiscount = Math.min(totalAmount, Number(appliedCoupon.discountValue) || 0);
+    } else {
+      const rawDiscount = totalAmount * (Number(appliedCoupon.discountValue) / 100);
+      const capped = appliedCoupon.maxDiscount ? Math.min(rawDiscount, Number(appliedCoupon.maxDiscount)) : rawDiscount;
+      couponDiscount = Math.max(0, Math.min(totalAmount, capped));
+    }
+    couponDiscount = Math.floor(couponDiscount);
+  }
+
+  const finalAmount = Math.max(0, totalAmount - couponDiscount) + deliveryFee + tax + platformFee + packagingFee;
   const selectedAddress = getDefaultAddress?.() || location || null;
   const addressText = formatAddress(selectedAddress);
 
@@ -149,19 +213,22 @@ export default function OneTimeTiffinOrder() {
       if (!payloadAddress.city) payloadAddress.city = "Unknown";
       if (!payloadAddress.state) payloadAddress.state = "Unknown";
 
+      const tiffinsList = tiffins.map((tiffin) => ({
+        items: categories.map((category) => ({
+          categoryId: category.categoryId,
+          selectedItemId: tiffin.selections?.[category.categoryId] || category.defaultItem?.itemId,
+        })),
+      }));
+
       const payload = {
         quantity,
-        menuDate: menu?.menuDate,
+        menuDate: menu.menuDate,
+        tiffins: tiffinsList,
         address: payloadAddress,
+        note,
+        couponCode: appliedCoupon?.couponCode || appliedCoupon?.code || null,
         customerName: userProfile?.name || userProfile?.fullName || selectedAddress?.fullName || "User",
         customerPhone: userProfile?.phone || selectedAddress?.phone || "",
-        note,
-        tiffins: tiffins.map((tiffin) => ({
-          items: categories.map((category) => ({
-            categoryId: category.categoryId,
-            selectedItemId: tiffin.selections?.[category.categoryId] || category.defaultItem?.itemId,
-          })),
-        })),
       };
 
       const response = await orderAPI.createOneTimeTiffinOrder(payload);
@@ -408,6 +475,137 @@ export default function OneTimeTiffinOrder() {
           </section>
         ))}
 
+        {/* Offers Section */}
+        <section className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm flex flex-col mb-2 mt-2">
+            {appliedCoupon ? (
+              <div className="px-4 py-3 md:px-5 md:py-4 flex items-center justify-between">
+                <div className="flex items-start gap-3">
+                  <TicketPercent className="h-5 w-5 text-[#009247] mt-0.5" />
+                  <div>
+                    <p className="text-[14px] font-semibold text-slate-900">'{appliedCoupon.couponCode}' applied</p>
+                    <p className="text-[12px] text-[#009247] font-medium mt-0.5">You saved {formatCurrency(couponDiscount)}</p>
+                  </div>
+                </div>
+                <button onClick={() => setAppliedCoupon(null)} className="text-[#009247] text-[12px] font-bold px-2 hover:underline tracking-wide">
+                  REMOVE
+                </button>
+              </div>
+            ) : (
+              <div className="px-4 py-3 md:px-5 md:py-4 flex flex-col gap-3">
+                {offers.length > 0 ? (
+                  <>
+                    <div className="flex items-start justify-between w-full">
+                  <div className="flex items-start gap-3 flex-1">
+                    <TicketPercent className="h-5 w-5 text-slate-700 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-[14px] font-semibold text-slate-900 leading-tight mb-0.5">
+                        {offers[0].discountType === 'flat-price' 
+                          ? `Save ${formatCurrency(offers[0].discountValue)}`
+                          : `Save ${offers[0].discountValue}%`
+                        } with '{offers[0].couponCode}'
+                      </p>
+                      {offers[0].minOrderValue && totalAmount < offers[0].minOrderValue ? (
+                        <p className="text-[12px] text-blue-600 font-medium mb-1">Add items worth {formatCurrency(offers[0].minOrderValue - totalAmount)} more to unlock</p>
+                      ) : null}
+                      
+                      {offers.length > 1 && (
+                        <button onClick={() => setShowOffers(!showOffers)} className="text-[12px] text-[#009247] hover:underline flex items-center mt-1 font-medium">
+                          {showOffers ? "Hide all coupons" : "View all coupons"} <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    className="border border-[#009247] text-[#009247] hover:bg-[#009247]/5 rounded px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed ml-2 shadow-sm"
+                    onClick={() => {
+                      setAppliedCoupon(offers[0]);
+                      toast.success(`Coupon ${offers[0].couponCode} applied successfully!`);
+                    }}
+                    disabled={offers[0].minOrderValue && totalAmount < offers[0].minOrderValue}
+                  >
+                    APPLY
+                  </button>
+                </div>
+
+                {showOffers && (
+                  <div className="mt-3 pt-4 border-t border-dashed border-slate-200 space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                      <input
+                        type="text"
+                        value={couponCodeInput}
+                        onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                        placeholder="Enter coupon code"
+                        className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-[13px] text-slate-900 focus:outline-none focus:border-[#009247]"
+                      />
+                      <button
+                        className="bg-white border border-[#009247] text-[#009247] rounded-xl px-5 h-10 text-[12px] font-bold uppercase hover:bg-[#009247]/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => {
+                          const code = couponCodeInput.trim();
+                          if (!code) return;
+                          const found = offers.find(o => o.couponCode === code);
+                          if (found) {
+                            if (found.minOrderValue && totalAmount < found.minOrderValue) {
+                              toast.error(`Minimum order value of ${formatCurrency(found.minOrderValue)} required`);
+                              return;
+                            }
+                            setAppliedCoupon(found);
+                            setCouponCodeInput("");
+                            toast.success(`Coupon ${code} applied successfully!`);
+                          } else {
+                            toast.error("Invalid coupon code");
+                          }
+                        }}
+                        disabled={!couponCodeInput.trim()}
+                      >
+                        APPLY
+                      </button>
+                    </div>
+                    
+                    {offers.slice(1).map((offer) => {
+                      const isApplicable = !offer.minOrderValue || totalAmount >= offer.minOrderValue;
+                      return (
+                        <div key={offer.offerId || offer._id} className="flex items-start justify-between">
+                          <div className="flex items-start gap-3 flex-1">
+                            <TicketPercent className="h-5 w-5 text-slate-500 mt-0.5 opacity-60" />
+                            <div className="flex-1">
+                              <p className="text-[14px] font-semibold text-slate-900 leading-tight mb-0.5">
+                                {offer.discountType === 'flat-price' 
+                                  ? `Save ${formatCurrency(offer.discountValue)}`
+                                  : `Save ${offer.discountValue}%`
+                                } with '{offer.couponCode}'
+                              </p>
+                              {!isApplicable ? (
+                                <p className="text-[12px] text-blue-600 font-medium mb-1 line-clamp-1">Add items worth {formatCurrency(offer.minOrderValue - totalAmount)} more to unlock</p>
+                              ) : null}
+                            </div>
+                          </div>
+                          <button
+                            className={`border rounded px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed ml-2 ${isApplicable ? 'border-[#009247] text-[#009247] hover:bg-[#009247]/5' : 'border-slate-300 text-slate-400'}`}
+                            onClick={() => {
+                              setAppliedCoupon(offer);
+                              setShowOffers(false);
+                              toast.success(`Coupon ${offer.couponCode} applied successfully!`);
+                            }}
+                            disabled={!isApplicable}
+                          >
+                            APPLY
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                </>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <TicketPercent className="h-5 w-5 text-slate-400" />
+                  <p className="text-[14px] text-slate-500 font-medium">No offers available</p>
+                </div>
+              )}
+              </div>
+            )}
+          </section>
+
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sticky bottom-4 z-30 mt-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-8 flex-1 w-full border-b sm:border-b-0 border-slate-100 pb-4 sm:pb-0">
@@ -423,8 +621,14 @@ export default function OneTimeTiffinOrder() {
                 </div>
                 <div className="flex justify-between items-center text-[12px] font-normal text-slate-500">
                   <span>Taxes & Charges</span>
-                  <span className="font-medium text-slate-900">₹0</span>
+                  <span className="font-medium text-slate-900">{formatCurrency(tax + platformFee + packagingFee)}</span>
                 </div>
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between items-center text-[12px] font-medium text-[#009247]">
+                    <span>Coupon Discount</span>
+                    <span>-{formatCurrency(couponDiscount)}</span>
+                  </div>
+                )}
               </div>
             </div>
             

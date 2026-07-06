@@ -101,7 +101,7 @@ export const OrdersListV2 = () => {
 
                     <div className="pl-4">
                       <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Pickup</p>
-                      <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-1">{order.restaurantId?.restaurantName || 'Restaurant'}</p>
+                      <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-1">{order.restaurantName || order.restaurantId?.restaurantName || 'MyMeal Store'}</p>
                     </div>
                     <div className="pl-4 pt-1">
                       <p className="text-[10px] font-bold text-green-500 uppercase tracking-wider">Dropoff</p>

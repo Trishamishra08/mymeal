@@ -7,6 +7,43 @@ import {
 import { getIO, rooms } from '../../../../config/socket.js';
 import { addOrderJob } from '../../../../queues/producers/order.producer.js';
 
+export async function injectAdminBusinessLocation(data) {
+  if (!data) return data;
+  const { FoodBusinessSettings } = await import('../../admin/models/businessSettings.model.js');
+  const settings = await FoodBusinessSettings.findOne({}).lean();
+  
+  const inject = (out) => {
+    if (!out) return out;
+    if (settings) {
+        out.restaurantName = settings.companyName || 'MyMeal';
+        out.restaurantAddress = settings.address || '';
+        out.restaurantPhone = settings.phone?.number || '';
+        if (settings.location?.coordinates) {
+          out.restaurantLocation = {
+            latitude: settings.location.coordinates[1],
+            longitude: settings.location.coordinates[0],
+            address: settings.address || '',
+            area: settings.region || '',
+            city: settings.state || '',
+            state: settings.state || ''
+          };
+        }
+    } else {
+        out.restaurantName = 'MyMeal';
+        out.restaurantAddress = '';
+    }
+    // Delete explicit restaurant data to prevent leaking Suhani Pathak
+    delete out.restaurantId;
+    delete out.restaurant;
+    return out;
+  };
+
+  if (Array.isArray(data)) {
+      return data.map(inject);
+  }
+  return inject(data);
+}
+
 export function enqueueOrderEvent(action, payload = {}) {
   try {
     void addOrderJob({ action, ...payload }).catch((err) => {
@@ -129,8 +166,26 @@ export function normalizeOrderForClient(orderDoc) {
   const order = orderDoc?.toObject ? orderDoc.toObject() : orderDoc || {};
   const mongoId = (order._id || orderDoc?._id || "").toString();
   const displayId = order.order_id || mongoId;
+  
+  const restLoc = order.restaurantId?.location || order.restaurant?.location || {};
+  const restaurantLocation = {
+    latitude: restLoc.latitude || restLoc.coordinates?.[1] || null,
+    longitude: restLoc.longitude || restLoc.coordinates?.[0] || null,
+    address: restLoc.address || restLoc.formattedAddress || "",
+    area: restLoc.area || "",
+    city: restLoc.city || "",
+    state: restLoc.state || ""
+  };
+  
+  delete order.restaurantId;
+  delete order.restaurant;
+  delete order.restaurantName;
+  delete order.restaurantAddress;
+  delete order.restaurantPhone;
+  
   return {
     ...order,
+    restaurantLocation,
     orderMongoId: mongoId,
     orderId: displayId,
     status: order?.orderStatus || order?.status || "",
@@ -197,29 +252,6 @@ export function buildDeliverySocketPayload(orderDoc, restaurantDoc = null) {
     total: order?.pricing?.total,
     payment: order?.payment,
     paymentMethod: order?.payment?.method,
-    restaurantId:
-      order?.restaurantId?._id?.toString?.() ||
-      order?.restaurantId?.toString?.() ||
-      order?.restaurantId,
-    restaurantName: restaurant?.restaurantName || order?.restaurantName,
-    restaurantAddress:
-      restaurantLocation?.address ||
-      restaurantLocation?.formattedAddress ||
-      restaurant?.addressLine1 ||
-      "",
-    restaurantPhone: restaurant?.phone || "",
-    restaurantLocation: {
-      latitude: restaurantLocation?.latitude,
-      longitude: restaurantLocation?.longitude,
-      address:
-        restaurantLocation?.address ||
-        restaurantLocation?.formattedAddress ||
-        restaurant?.addressLine1 ||
-        "",
-      area: restaurantLocation?.area || restaurant?.area || "",
-      city: restaurantLocation?.city || restaurant?.city || "",
-      state: restaurantLocation?.state || restaurant?.state || "",
-    },
     deliveryAddress: order?.deliveryAddress,
     customerAddress: customerAddressParts.length ? customerAddressParts.join(', ') : "",
     customerName: order?.customerName || order?.deliveryAddress?.fullName || order?.deliveryAddress?.name || order?.userId?.name || "",

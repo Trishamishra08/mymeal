@@ -1,7 +1,9 @@
 import mongoose from 'mongoose';
 import { FoodOrder } from '../models/order.model.js';
+import { FoodOfferUsage } from '../../admin/models/offerUsage.model.js';
 import { FoodFeeSettings } from '../../admin/models/feeSettings.model.js';
 import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+import { FoodOffer } from '../../admin/models/offer.model.js';
 import { MyMealDailyMenu } from '../../admin/models/dailyMenu.model.js';
 import { MyMealMenuCategory } from '../../admin/models/menuCategory.model.js';
 import { MyMealMenuItem } from '../../admin/models/menuItem.model.js';
@@ -227,7 +229,6 @@ export async function createOneTimeTiffinOrder(userId, dto = {}) {
     FoodRestaurant.findOne({}).lean()
   ]);
   const unitPrice = Number(feeSettings?.oneTimeTiffinPrice || 0);
-  const deliveryFee = Number(feeSettings?.deliveryFee || 0);
   if (!unitPrice || unitPrice <= 0) {
     throw new ValidationError('One-time tiffin price is not configured');
   }
@@ -238,7 +239,61 @@ export async function createOneTimeTiffinOrder(userId, dto = {}) {
   const tiffins = buildTiffins(rows, Array.isArray(dto.tiffins) ? dto.tiffins : [], quantity);
   const deliveryAddress = sanitizeAddress(dto.address || dto.deliveryAddress || {}, user);
   const subtotal = unitPrice * quantity;
-  const total = subtotal + deliveryFee;
+
+  let deliveryFee = Number(feeSettings?.deliveryFee || 0);
+  const freeUpTo = Number(feeSettings?.freeDeliveryUpTo || 0);
+  const freeThreshold = Number(feeSettings?.freeDeliveryThreshold || 149);
+
+  if (Number.isFinite(freeUpTo) && freeUpTo > 0 && subtotal >= freeUpTo) {
+    deliveryFee = 0;
+  } else if (subtotal >= freeThreshold) {
+    deliveryFee = 0;
+  }
+
+  const platformFee = Number(feeSettings?.platformFee || 0);
+  const packagingFee = Number(feeSettings?.packagingFee || 0);
+
+  const gstOnItemTotal = subtotal * (Number(feeSettings?.gstRate || 0) / 100);
+  const gstOnDeliveryFee = deliveryFee * (Number(feeSettings?.gstOnDeliveryFee || 0) / 100);
+  const gstOnPlatformFee = platformFee * (Number(feeSettings?.gstOnPlatformFee || 0) / 100);
+  const gstOnPackagingFee = packagingFee * (Number(feeSettings?.gstOnPackagingFee || 0) / 100);
+  const tax = Math.round(gstOnItemTotal + gstOnDeliveryFee + gstOnPlatformFee + gstOnPackagingFee);
+
+  let discount = 0;
+  let appliedCoupon = null;
+  let couponError = null;
+  const couponCode = dto.couponCode ? String(dto.couponCode).trim().toUpperCase() : null;
+
+  if (couponCode) {
+    const offer = await FoodOffer.findOne({ couponCode }).lean();
+    if (!offer) {
+      couponError = "Invalid or expired coupon code.";
+    } else if (offer.status !== 'active') {
+      couponError = "This coupon is no longer active.";
+    } else if (offer.startDate && new Date(offer.startDate).getTime() > Date.now()) {
+      couponError = "This coupon is not yet valid.";
+    } else if (offer.endDate && new Date(offer.endDate).getTime() < Date.now()) {
+      couponError = "This coupon has expired.";
+    } else if (offer.minOrderValue && subtotal < offer.minOrderValue) {
+      couponError = `Minimum order value of ₹${offer.minOrderValue} required for this coupon.`;
+    } else if (offer.usageLimit && offer.usedCount >= offer.usageLimit) {
+      couponError = "Coupon usage limit reached.";
+    } else {
+      // Valid coupon
+      if (offer.discountType === 'flat-price') {
+        discount = Math.min(subtotal, Math.floor(Number(offer.discountValue) || 0));
+      } else {
+        const rawDiscount = subtotal * (Number(offer.discountValue) / 100);
+        const capped = offer.maxDiscount ? Math.min(rawDiscount, Number(offer.maxDiscount)) : rawDiscount;
+        discount = Math.max(0, Math.min(subtotal, Math.floor(capped)));
+      }
+      appliedCoupon = { code: couponCode, discount };
+    }
+  }
+
+  const totalBeforeDiscount = subtotal + tax + packagingFee + deliveryFee + platformFee;
+  const payableTotal = Math.max(0, subtotal - discount) + tax + packagingFee + deliveryFee + platformFee;
+
   const order = new FoodOrder({
     userId: new mongoose.Types.ObjectId(userId),
     items: [{
@@ -256,20 +311,24 @@ export async function createOneTimeTiffinOrder(userId, dto = {}) {
     customerPhone: dto.customerPhone || deliveryAddress.phone || user?.phone || '',
     pricing: {
       subtotal: subtotal,
-      tax: 0,
-      packagingFee: 0,
+      tax: tax,
+      packagingFee: packagingFee,
       deliveryFee: deliveryFee,
-      platformFee: 0,
-      discount: 0,
-      originalTotal: total,
-      payableTotal: total,
-      total,
+      platformFee: platformFee,
+      discount: discount,
+      couponDiscount: discount > 0 ? discount : undefined,
+      couponCode: appliedCoupon?.code || (couponCode && !couponError ? couponCode : null),
+      appliedCoupon,
+      couponError,
+      originalTotal: totalBeforeDiscount,
+      payableTotal: payableTotal,
+      total: payableTotal,
       currency: 'INR',
     },
     payment: {
       method: 'razorpay',
       status: isRazorpayConfigured() ? 'created' : 'created',
-      amountDue: total,
+      amountDue: payableTotal,
       razorpay: {},
       qr: {},
     },
@@ -299,12 +358,12 @@ export async function createOneTimeTiffinOrder(userId, dto = {}) {
     sendCutlery: false,
     riderEarning: 0,
     deliveryBonusAmount: 0,
-    platformProfit: total,
+    platformProfit: payableTotal,
   });
 
   let razorpayPayload = null;
   if (isRazorpayConfigured()) {
-    const rzOrder = await createRazorpayOrder(Math.round(total * 100), 'INR', order._id.toString());
+    const rzOrder = await createRazorpayOrder(Math.round(payableTotal * 100), 'INR', order._id.toString());
     order.payment.razorpay = { orderId: rzOrder.id, paymentId: '', signature: '' };
     razorpayPayload = {
       key: getRazorpayKeyId(),
@@ -315,6 +374,22 @@ export async function createOneTimeTiffinOrder(userId, dto = {}) {
   }
 
   await order.save();
+
+  if (couponCode && !couponError && appliedCoupon) {
+    const offer = await FoodOffer.findOne({ couponCode }).lean();
+    if (offer) {
+      await FoodOffer.updateOne({ _id: offer._id }, { $inc: { usedCount: 1 } });
+      await FoodOfferUsage.updateOne(
+        { offerId: offer._id, userId: new mongoose.Types.ObjectId(userId) },
+        {
+          $inc: { count: 1 },
+          $setOnInsert: { offerId: offer._id, userId: new mongoose.Types.ObjectId(userId) },
+        },
+        { upsert: true }
+      );
+    }
+  }
+
   await foodTransactionService.createInitialTransaction({
     ...(order.toObject?.() || order),
     pricing: order.pricing,

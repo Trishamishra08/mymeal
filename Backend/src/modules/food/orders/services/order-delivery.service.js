@@ -10,8 +10,45 @@ import {
   ForbiddenError,
   NotFoundError,
 } from '../../../../core/auth/errors.js';
-import { buildPaginatedResult, buildPaginationOptions } from '../../../../utils/helpers.js';
+import { buildPaginationOptions, buildPaginatedResult } from '../../../../utils/helpers.js';
 import { logger } from '../../../../utils/logger.js';
+
+async function injectAdminBusinessLocation(data) {
+  if (!data) return data;
+  const { FoodBusinessSettings } = await import('../../admin/models/businessSettings.model.js');
+  const settings = await FoodBusinessSettings.findOne({}).lean();
+  
+  const inject = (out) => {
+    if (!out) return out;
+    if (settings) {
+        out.restaurantName = settings.companyName || 'MyMeal';
+        out.restaurantAddress = settings.address || '';
+        out.restaurantPhone = settings.phone?.number || '';
+        if (settings.location?.coordinates) {
+          out.restaurantLocation = {
+            latitude: settings.location.coordinates[1],
+            longitude: settings.location.coordinates[0],
+            address: settings.address || '',
+            area: settings.region || '',
+            city: settings.state || '',
+            state: settings.state || ''
+          };
+        }
+    } else {
+        out.restaurantName = 'MyMeal';
+        out.restaurantAddress = '';
+    }
+    // Delete explicit restaurant data to prevent leaking Suhani Pathak
+    delete out.restaurantId;
+    delete out.restaurant;
+    return out;
+  };
+
+  if (Array.isArray(data)) {
+      return data.map(inject);
+  }
+  return inject(data);
+}
 import { getIO, rooms } from '../../../../config/socket.js';
 import { getFirebaseDB } from '../../../../config/firebase.js';
 import {
@@ -298,37 +335,7 @@ export async function getCurrentTripDelivery(deliveryPartnerId) {
   const tx = await FoodTransaction.findOne({ orderId: order._id }).lean();
   const out = sanitizeOrderForExternal(order);
   
-  // Inject restaurant details explicitly since frontend PickupActionModal expects them
-  if (!order.restaurantId) {
-      const { FoodRestaurant } = await import('../../restaurant/models/restaurant.model.js');
-      const primaryRestaurant = await FoodRestaurant.findOne({}).lean();
-      if (primaryRestaurant) {
-          out.restaurantName = primaryRestaurant.restaurantName;
-          out.restaurantAddress = primaryRestaurant.location?.address || primaryRestaurant.location?.formattedAddress || primaryRestaurant.addressLine1;
-          out.restaurantPhone = primaryRestaurant.phone;
-          
-          if (primaryRestaurant.location) {
-              out.restaurantLocation = {
-                  latitude: primaryRestaurant.location.latitude || primaryRestaurant.location.coordinates?.[1],
-                  longitude: primaryRestaurant.location.longitude || primaryRestaurant.location.coordinates?.[0],
-                  address: out.restaurantAddress
-              };
-          }
-      }
-  } else {
-      const r = order.restaurantId;
-      out.restaurantName = r.restaurantName;
-      out.restaurantAddress = r.location?.address || r.location?.formattedAddress || r.addressLine1;
-      out.restaurantPhone = r.phone;
-      
-      if (r.location) {
-          out.restaurantLocation = {
-              latitude: r.location.latitude || r.location.coordinates?.[1],
-              longitude: r.location.longitude || r.location.coordinates?.[0],
-              address: out.restaurantAddress
-          };
-      }
-  }
+  await injectAdminBusinessLocation(out);
   if (tx) {
     out.paymentMethod = tx.payment?.method || tx.paymentMethod || out.paymentMethod;
     out.payment = tx.payment || out.payment;
@@ -366,7 +373,7 @@ export async function getActiveTripsDelivery(deliveryPartnerId) {
   const txs = await FoodTransaction.find({ orderId: { $in: orderIds } }).lean();
   const txMap = new Map(txs.map(t => [String(t.orderId), t]));
 
-  return orders.map(order => {
+  return await injectAdminBusinessLocation(orders.map(order => {
     const tx = txMap.get(String(order._id));
     const out = sanitizeOrderForExternal(order);
     if (tx) {
@@ -377,7 +384,7 @@ export async function getActiveTripsDelivery(deliveryPartnerId) {
       out.transactionStatus = tx.status || out.transactionStatus;
     }
     return out;
-  });
+  }));
 }
 
 export async function listOrdersAvailableDelivery(deliveryPartnerId, query) {
@@ -434,18 +441,19 @@ export async function listOrdersAvailableDelivery(deliveryPartnerId, query) {
     : [];
   const txByOrderId = new Map(txRows.map((t) => [String(t.orderId), t]));
 
-  const enriched = (docs || []).map((doc) => {
+  const enriched = await injectAdminBusinessLocation((docs || []).map((doc) => {
     const tx = txByOrderId.get(String(doc?._id)) || null;
-    if (!tx) return doc;
+    const sanitizedDoc = sanitizeOrderForExternal(doc);
+    if (!tx) return sanitizedDoc;
     return {
-      ...doc,
-      paymentMethod: tx.payment?.method || tx.paymentMethod || doc.paymentMethod,
-      payment: tx.payment || doc.payment,
-      pricing: tx.pricing || doc.pricing,
-      amounts: tx.amounts || doc.amounts,
-      transactionStatus: tx.status || doc.transactionStatus,
+      ...sanitizedDoc,
+      paymentMethod: tx.payment?.method || tx.paymentMethod || sanitizedDoc.paymentMethod,
+      payment: tx.payment || sanitizedDoc.payment,
+      pricing: tx.pricing || sanitizedDoc.pricing,
+      amounts: tx.amounts || sanitizedDoc.amounts,
+      transactionStatus: tx.status || sanitizedDoc.transactionStatus,
     };
-  });
+  }));
 
   return {
     ...buildPaginatedResult({ docs: enriched, total, page, limit }),
@@ -543,7 +551,7 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
       const acceptedOrder = await FoodOrder.findOne(identity)
         .populate('restaurantId userId');
       return acceptedOrder
-        ? sanitizeOrderForExternal(acceptedOrder)
+        ? await injectAdminBusinessLocation(sanitizeOrderForExternal(acceptedOrder))
         : null;
     }
     if (
@@ -558,38 +566,7 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
 
   const responseOrder = sanitizeOrderForExternal(order);
   
-  // Inject restaurant details explicitly since frontend PickupActionModal expects them
-  if (!order.restaurantId) {
-      const { FoodRestaurant } = await import('../../restaurant/models/restaurant.model.js');
-      const primaryRestaurant = await FoodRestaurant.findOne({}).lean();
-      if (primaryRestaurant) {
-          responseOrder.restaurantName = primaryRestaurant.restaurantName;
-          responseOrder.restaurantAddress = primaryRestaurant.location?.address || primaryRestaurant.location?.formattedAddress || primaryRestaurant.addressLine1;
-          responseOrder.restaurantPhone = primaryRestaurant.phone;
-          
-          // Also set restaurantLocation for map coordinates
-          if (primaryRestaurant.location) {
-              responseOrder.restaurantLocation = {
-                  latitude: primaryRestaurant.location.latitude || primaryRestaurant.location.coordinates?.[1],
-                  longitude: primaryRestaurant.location.longitude || primaryRestaurant.location.coordinates?.[0],
-                  address: responseOrder.restaurantAddress
-              };
-          }
-      }
-  } else {
-      const r = order.restaurantId;
-      responseOrder.restaurantName = r.restaurantName;
-      responseOrder.restaurantAddress = r.location?.address || r.location?.formattedAddress || r.addressLine1;
-      responseOrder.restaurantPhone = r.phone;
-      
-      if (r.location) {
-          responseOrder.restaurantLocation = {
-              latitude: r.location.latitude || r.location.coordinates?.[1],
-              longitude: r.location.longitude || r.location.coordinates?.[0],
-              address: responseOrder.restaurantAddress
-          };
-      }
-  }
+  await injectAdminBusinessLocation(responseOrder);
   void (async () => {
     try {
       const rest = order.restaurantId;
@@ -1031,7 +1008,7 @@ export async function confirmReachedDropDelivery(orderId, deliveryPartnerId) {
 
   if (order.deliveryVerification?.dropOtp?.verified) {
     emitOrderUpdate(order, deliveryPartnerId);
-    return sanitizeOrderForExternal(order);
+    return await injectAdminBusinessLocation(sanitizeOrderForExternal(order));
   }
 
   const alreadyAtDrop =
@@ -1059,7 +1036,7 @@ export async function confirmReachedDropDelivery(orderId, deliveryPartnerId) {
     }
     // Rider explicitly requested OTP again at drop, re-emit same OTP without regenerating.
     emitDeliveryDropOtpToUser(order, existingOtp);
-    return sanitizeOrderForExternal(order);
+    return await injectAdminBusinessLocation(sanitizeOrderForExternal(order));
   }
 
   if (!existingOtp) {
@@ -1103,7 +1080,7 @@ export async function confirmReachedDropDelivery(orderId, deliveryPartnerId) {
     dropOtpRequired: order.deliveryVerification?.dropOtp?.required ?? true,
     dropOtpVerified: order.deliveryVerification?.dropOtp?.verified ?? false,
   });
-  return sanitizeOrderForExternal(order);
+  return await injectAdminBusinessLocation(sanitizeOrderForExternal(order));
 }
 
 export async function verifyDropOtpDelivery(orderId, deliveryPartnerId, otp) {
@@ -1137,7 +1114,7 @@ export async function verifyDropOtpDelivery(orderId, deliveryPartnerId, otp) {
     await order.save();
   }
   if (order.deliveryVerification?.dropOtp?.verified) {
-    return { order: sanitizeOrderForExternal(order) };
+    return { order: await injectAdminBusinessLocation(sanitizeOrderForExternal(order)) };
   }
 
   if (!isOtpMatch(order.deliveryOtp, otpStr)) {
@@ -1158,7 +1135,7 @@ export async function verifyDropOtpDelivery(orderId, deliveryPartnerId, otp) {
     orderId: order._id.toString(),
     deliveryPartnerId,
   });
-  return { order: sanitizeOrderForExternal(order) };
+  return { order: await injectAdminBusinessLocation(sanitizeOrderForExternal(order)) };
 }
 
 export async function completeDelivery(orderId, deliveryPartnerId, body = {}) {
@@ -1279,7 +1256,7 @@ export async function completeDelivery(orderId, deliveryPartnerId, body = {}) {
     paymentStatus: 'paid'
   });
 
-  return sanitizeOrderForExternal(order);
+  return await injectAdminBusinessLocation(sanitizeOrderForExternal(order));
 }
 
 

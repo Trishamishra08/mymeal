@@ -49,6 +49,7 @@ import {
   buildDeliverySocketPayload,
   notifyRestaurantNewOrder,
   isStatusAdvance,
+  injectAdminBusinessLocation,
 } from './order.helpers.js';
 
 
@@ -759,7 +760,7 @@ export async function resyncState(userId, role) {
       .limit(20)
       .lean();
 
-    const pendingOffers = (pendingOfferDocs || [])
+    const pendingOffers = await Promise.all((pendingOfferDocs || [])
       .filter((doc) => {
         const offers = Array.isArray(doc?.dispatch?.offeredTo) ? doc.dispatch.offeredTo : [];
         const partnerOffers = offers.filter(
@@ -774,10 +775,10 @@ export async function resyncState(userId, role) {
 
         return Date.now() - offeredAt <= DELIVERY_RESYNC_OFFER_TTL_MS;
       })
-      .map((doc) => buildDeliverySocketPayload(doc, doc.restaurantId));
+      .map(async (doc) => await injectAdminBusinessLocation(buildDeliverySocketPayload(doc, doc.restaurantId))));
 
     return {
-      activeOrder: activeOrder ? sanitizeOrderForExternal(activeOrder) : null,
+      activeOrder: activeOrder ? await injectAdminBusinessLocation(sanitizeOrderForExternal(activeOrder)) : null,
       pendingOffers,
     };
   }
@@ -1326,7 +1327,7 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
                 if (assignedId) {
                     console.log(`[DEBUG] Notifying assigned partner ${assignedId} that order is ready.`);
                     const restaurant = await FoodRestaurant.findById(order.restaurantId).select('restaurantName location addressLine1 area city state').lean();
-                    const payload = buildDeliverySocketPayload(order, restaurant);
+                    const payload = await injectAdminBusinessLocation(buildDeliverySocketPayload(order, restaurant));
                     logger.info(
                       `[DeliveryDispatch] Emitting order_ready to ${rooms.delivery(assignedId)} for order ${order._id.toString()}`,
                     );
@@ -1717,7 +1718,7 @@ export async function assignDeliveryPartnerAdmin(
       const { getIO, rooms } = await import('../../../../config/socket.js');
       const io = getIO();
       if (io) {
-          const payload = populatedOrder ? buildDeliverySocketPayload(populatedOrder, restaurantForPayload) : { 
+          const payload = populatedOrder ? await injectAdminBusinessLocation(buildDeliverySocketPayload(populatedOrder, restaurantForPayload)) : { 
              orderMongoId: order._id.toString(), orderId: order._id.toString(), 
              orderStatus: order.orderStatus, dispatchStatus: order.dispatch?.status 
           };

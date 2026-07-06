@@ -42,12 +42,16 @@ export const useProximityCheck = () => {
   const distanceToTarget = useMemo(() => {
     if (!riderLocation || !targetLocation) return Infinity;
     
-    return calculateDistance(
-      riderLocation.lat,
-      riderLocation.lng,
-      targetLocation.lat,
-      targetLocation.lng
-    );
+    const tLat = Number(targetLocation.lat ?? targetLocation.latitude);
+    const tLng = Number(targetLocation.lng ?? targetLocation.longitude);
+    const rLat = Number(riderLocation.lat ?? riderLocation.latitude);
+    const rLng = Number(riderLocation.lng ?? riderLocation.longitude);
+
+    if (!Number.isFinite(tLat) || !Number.isFinite(tLng) || !Number.isFinite(rLat) || !Number.isFinite(rLng)) {
+      return Infinity;
+    }
+
+    return calculateDistance(rLat, rLng, tLat, tLng);
   }, [riderLocation, targetLocation]);
 
   // Dev mode bypass

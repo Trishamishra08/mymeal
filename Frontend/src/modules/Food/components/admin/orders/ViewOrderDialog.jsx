@@ -264,16 +264,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order, onAssignD
             )}
           </div>
 
-          {/* Restaurant Information */}
-          {order.restaurant && (
-            <div className="border-t border-slate-200 pt-4">
-              <h3 className="text-sm font-semibold text-slate-700 mb-4">Restaurant Information</h3>
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Restaurant Name</p>
-                <p className="text-sm font-medium text-slate-900">{order.restaurant}</p>
-              </div>
-            </div>
-          )}
+          {/* Restaurant Information Removed */}
 
           {/* MyMeal Tiffin Details */}
           {order.tiffinOrder && (
@@ -478,51 +469,51 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order, onAssignD
           <div className="border-t border-slate-200 pt-4">
             <h3 className="text-sm font-semibold text-slate-700 mb-4">Pricing Breakdown</h3>
             <div className="space-y-2">
-              {order.totalItemAmount !== undefined && (
+              {(order.totalItemAmount !== undefined || order.pricing?.subtotal !== undefined) && (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Subtotal</span>
-                  <span className="font-medium text-slate-900">₹{order.totalItemAmount.toFixed(2)}</span>
+                  <span className="font-medium text-slate-900">₹{((order.totalItemAmount ?? order.pricing?.subtotal) || 0).toFixed(2)}</span>
                 </div>
               )}
-              {order.itemDiscount !== undefined && order.itemDiscount > 0 && (
+              {((order.itemDiscount !== undefined && order.itemDiscount > 0) || (order.pricing?.discount !== undefined && order.pricing?.discount > 0)) && (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Discount</span>
-                  <span className="font-medium text-emerald-600">-₹{order.itemDiscount.toFixed(2)}</span>
+                  <span className="font-medium text-emerald-600">-₹{((order.itemDiscount ?? order.pricing?.discount) || 0).toFixed(2)}</span>
                 </div>
               )}
-              {order.couponDiscount !== undefined && order.couponDiscount > 0 && (
+              {((order.couponDiscount !== undefined && order.couponDiscount > 0) || (order.pricing?.couponDiscount !== undefined && order.pricing?.couponDiscount > 0)) && (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Coupon Discount</span>
-                  <span className="font-medium text-emerald-600">-₹{order.couponDiscount.toFixed(2)}</span>
+                  <span className="font-medium text-emerald-600">-₹{((order.couponDiscount ?? order.pricing?.couponDiscount) || 0).toFixed(2)}</span>
                 </div>
               )}
-              {order.deliveryCharge !== undefined && (
+              {(order.deliveryCharge !== undefined || order.pricing?.deliveryFee !== undefined) && (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Delivery Charge</span>
                   <span className="font-medium text-slate-900">
-                    {order.deliveryCharge > 0 ? `₹${order.deliveryCharge.toFixed(2)}` : <span className="text-emerald-600">Free delivery</span>}
+                    {((order.deliveryCharge ?? order.pricing?.deliveryFee) || 0) > 0 ? `₹${((order.deliveryCharge ?? order.pricing?.deliveryFee) || 0).toFixed(2)}` : <span className="text-emerald-600">Free delivery</span>}
                   </span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Platform Fee</span>
                 <span className="font-medium text-slate-900">
-                  {order.platformFee !== undefined && order.platformFee > 0
-                    ? `₹${order.platformFee.toFixed(2)}`
+                  {((order.platformFee ?? order.pricing?.platformProfit) || 0) > 0
+                    ? `₹${((order.platformFee ?? order.pricing?.platformProfit) || 0).toFixed(2)}`
                     : <span className="text-slate-400">₹0.00</span>}
                 </span>
               </div>
-              {order.vatTax !== undefined && order.vatTax > 0 && (
+              {((order.vatTax !== undefined && order.vatTax > 0) || (order.pricing?.tax !== undefined && order.pricing?.tax > 0)) && (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Tax (GST)</span>
-                  <span className="font-medium text-slate-900">₹{order.vatTax.toFixed(2)}</span>
+                  <span className="font-medium text-slate-900">₹{((order.vatTax ?? order.pricing?.tax) || 0).toFixed(2)}</span>
                 </div>
               )}
               <div className="pt-2 border-t border-slate-200">
                 <div className="flex justify-between items-center">
                   <span className="text-base font-semibold text-slate-700">Total Amount</span>
                   <span className="text-xl font-bold text-emerald-600">
-                    ₹{(order.totalAmount || order.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{(order.totalAmount ?? order.pricing?.total ?? order.total ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>

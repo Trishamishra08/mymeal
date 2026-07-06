@@ -6,8 +6,7 @@ const foodOfferSchema = new mongoose.Schema(
         discountType: { type: String, enum: ['percentage', 'flat-price'], default: 'percentage', index: true },
         discountValue: { type: Number, required: true, min: 0 },
         customerScope: { type: String, enum: ['all', 'first-time'], default: 'all', index: true },
-        restaurantScope: { type: String, enum: ['all', 'selected'], default: 'all', index: true },
-        restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodRestaurant' },
+
         minOrderValue: { type: Number, default: 0, min: 0 },
         maxDiscount: { type: Number, default: null, min: 0 },
         usageLimit: { type: Number, default: null, min: 0 },
@@ -22,6 +21,6 @@ const foodOfferSchema = new mongoose.Schema(
     { collection: 'food_offers', timestamps: true }
 );
 
-foodOfferSchema.index({ restaurantId: 1, createdAt: -1 });
+foodOfferSchema.index({ createdAt: -1 });
 
 export const FoodOffer = mongoose.model('FoodOffer', foodOfferSchema);

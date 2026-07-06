@@ -16,6 +16,7 @@ import {
   haversineKm,
   notifyOwnerSafely,
   notifyOwnersSafely,
+  injectAdminBusinessLocation,
 } from './order.helpers.js';
 
 async function filterPartnersByCashLimit(partners = [], options = {}) {
@@ -201,7 +202,7 @@ export async function tryAutoAssign(orderId, options = {}) {
       // If we ran out of new eligible partners, we might want to re-offer to everyone (Phase 2 style)
       const io = getIO();
       if (io && partners.length > 0) {
-        const payload = buildDeliverySocketPayload(order, order.restaurantId);
+        const payload = await injectAdminBusinessLocation(buildDeliverySocketPayload(order, order.restaurantId));
         for (const p of partners) {
           const roomName = rooms.delivery(p.partnerId);
           io.to(roomName).emit('new_order_available', { ...payload, pickupDistanceKm: p.distanceKm });
@@ -239,7 +240,7 @@ export async function tryAutoAssign(orderId, options = {}) {
     }
 
     const io = getIO();
-    const payload = buildDeliverySocketPayload(order, order.restaurantId);
+    const payload = await injectAdminBusinessLocation(buildDeliverySocketPayload(order, order.restaurantId));
 
     const phase1Batch = eligible.slice(0, Math.min(20, eligible.length));
 

@@ -7,8 +7,7 @@ const createOfferSchema = z.object({
     discountType: z.enum(['percentage', 'flat-price']).default('percentage'),
     discountValue: z.number().positive('Discount value must be greater than 0'),
     customerScope: z.enum(['all', 'first-time']).default('all'),
-    restaurantScope: z.enum(['all', 'selected']).default('all'),
-    restaurantId: z.string().optional(),
+
     endDate: z.string().optional().or(z.literal('')).or(z.undefined()),
     startDate: z.string().optional().or(z.literal('')).or(z.undefined()),
     minOrderValue: z.number().min(0).optional(),
@@ -25,8 +24,7 @@ export const validateCreateOfferDto = (body) => {
         discountType: body?.discountType,
         discountValue: Number(body?.discountValue),
         customerScope: body?.customerScope,
-        restaurantScope: body?.restaurantScope,
-        restaurantId: body?.restaurantId ? String(body.restaurantId) : undefined,
+
         endDate: body?.endDate ? String(body.endDate) : undefined,
         startDate: body?.startDate ? String(body.startDate) : undefined,
         minOrderValue: body?.minOrderValue !== undefined ? Number(body.minOrderValue) : undefined,
@@ -41,11 +39,7 @@ export const validateCreateOfferDto = (body) => {
         throw new ValidationError(result.error.errors[0].message);
     }
 
-    if (result.data.restaurantScope === 'selected') {
-        if (!result.data.restaurantId || !mongoose.Types.ObjectId.isValid(result.data.restaurantId)) {
-            throw new ValidationError('Valid restaurantId is required for selected restaurant scope');
-        }
-    }
+
 
     const endDate = result.data.endDate ? new Date(`${result.data.endDate}T00:00:00.000Z`) : undefined;
     if (endDate && Number.isNaN(endDate.getTime())) {
@@ -77,8 +71,7 @@ export const validateCreateOfferDto = (body) => {
         discountType: result.data.discountType,
         discountValue: result.data.discountValue,
         customerScope: result.data.customerScope,
-        restaurantScope: result.data.restaurantScope,
-        restaurantId: result.data.restaurantScope === 'selected' ? result.data.restaurantId : undefined,
+
         endDate,
         startDate,
         minOrderValue: result.data.minOrderValue,

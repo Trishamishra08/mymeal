@@ -1697,7 +1697,7 @@ export const listPublicOffers = async () => {
 
     const list = await FoodOffer.find(filter)
         .sort({ createdAt: -1 })
-        .populate({ path: 'restaurantId', select: 'restaurantName restaurantNameNormalized profileImage estimatedDeliveryTime rating' })
+
         .lean();
 
     const allOffers = list.map((o) => {

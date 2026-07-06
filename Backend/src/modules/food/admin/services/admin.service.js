@@ -122,9 +122,6 @@ export async function getRestaurantComplaints(query = {}) {
     const filter = { type: 'order' };
     if (query.status && query.status !== 'all') filter.status = query.status;
     if (query.complaintType && query.complaintType !== 'all') filter.issueType = query.complaintType;
-    if (query.restaurantId && mongoose.Types.ObjectId.isValid(query.restaurantId)) {
-        filter.restaurantId = new mongoose.Types.ObjectId(query.restaurantId);
-    }
     if (query.search) {
         const searchRegex = { $regex: query.search, $options: 'i' };
         const restaurantIds = await FoodRestaurant.find({ restaurantName: searchRegex }).select('_id').lean();
@@ -3597,17 +3594,14 @@ export async function deleteRestaurant(id) {
 export async function getAllOffers(_query = {}) {
     const list = await FoodOffer.find({})
         .sort({ createdAt: -1 })
-        .populate({ path: 'restaurantId', select: 'restaurantName' })
+
         .lean();
 
     const offers = list.map((o, index) => {
         const now = Date.now();
         const endTs = o.endDate ? new Date(o.endDate).getTime() : null;
         const isExpired = Boolean(endTs && now >= endTs);
-        const restaurantName =
-            o.restaurantScope === 'selected'
-                ? (o.restaurantId?.restaurantName || 'Selected Restaurant')
-                : 'All Restaurants';
+        const restaurantName = 'All Restaurants';
 
         const discountPercentage = o.discountType === 'percentage' ? Number(o.discountValue) : 0;
 
@@ -3634,7 +3628,7 @@ export async function getAllOffers(_query = {}) {
             maxDiscount: o.maxDiscount ?? null,
             usageLimit: o.usageLimit ?? null,
             usedCount: o.usedCount ?? 0,
-            restaurantScope: o.restaurantScope
+            usedCount: o.usedCount ?? 0
         };
     });
 
@@ -3652,8 +3646,6 @@ export async function createAdminOffer(body) {
         discountType: body.discountType,
         discountValue: body.discountValue,
         customerScope: body.customerScope,
-        restaurantScope: body.restaurantScope,
-        restaurantId: body.restaurantScope === 'selected' ? body.restaurantId : undefined,
         minOrderValue: body.minOrderValue ?? 0,
         maxDiscount: body.maxDiscount ?? null,
         usageLimit: body.usageLimit ?? null,
@@ -3665,26 +3657,7 @@ export async function createAdminOffer(body) {
         showInCart: true
     });
 
-    if (doc.restaurantScope === 'selected' && doc.restaurantId) {
-        try {
-            const { notifyOwnersSafely } = await import('../../../../core/notifications/firebase.service.js');
-            await notifyOwnersSafely(
-                [{ ownerType: 'RESTAURANT', ownerId: doc.restaurantId }],
-                {
-                    title: 'New Campaign Invitation! 📢',
-                    body: `You have been invited to join a new campaign: "${doc.couponCode}". Check it out now!`,
-                    image: 'https://i.ibb.co/3m2Yh7r/Appzeto-Brand-Image.png',
-                    data: {
-                        type: 'campaign_invitation',
-                        offerId: String(doc._id),
-                        couponCode: doc.couponCode
-                    }
-                }
-            );
-        } catch (e) {
-            console.error('Failed to send campaign invitation notification:', e);
-        }
-    }
+    // Restaurant notifications removed due to single kitchen architecture
 
     return doc.toObject();
 }
