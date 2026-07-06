@@ -25,20 +25,7 @@ export const OrderSummaryModal = ({ order, onDone }) => {
           <h1 className="text-white text-4xl sm:text-5xl font-bold mb-2 tracking-tight">Well Done!</h1>
           <p className="text-white/90 text-base sm:text-lg mb-8 sm:mb-12">Trip completed successfully.</p>
 
-          <div className="bg-white rounded-3xl p-5 sm:p-8 mb-8 sm:mb-12 shadow-2xl text-gray-900 border border-white/20">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Star className="w-4 h-4 text-orange-400 fill-orange-400" />
-              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Earnings Added</p>
-              <Star className="w-4 h-4 text-orange-400 fill-orange-400" />
-            </div>
-            
-            <p className="text-gray-950 text-5xl sm:text-6xl font-bold mb-5 sm:mb-6 tracking-tighter">₹{Number(earnings).toFixed(2)}</p>
-            
-            <div className="flex items-center justify-center gap-3 py-3 bg-green-50 rounded-2xl text-green-700 text-sm font-bold border border-green-100">
-              <Wallet className="w-5 h-5" />
-              <span>Transferred to Wallet</span>
-            </div>
-          </div>
+
 
           <button 
             onClick={onDone}

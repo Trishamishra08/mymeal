@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { AuthError } from '../../../../core/auth/errors.js';
 import * as adminController from '../controllers/admin.controller.js';
 import * as foodApprovalController from '../controllers/foodApproval.controller.js';
@@ -31,6 +31,7 @@ import {
 } from '../../landing/controllers/subscriptionPlan.controller.js';
 import { upload } from '../../../../middleware/upload.js';
 import menuBulkRoutes from './menuBulk.routes.js';
+import menuManagementRoutes from './menuManagement.routes.js';
 
 const router = express.Router();
 
@@ -67,6 +68,9 @@ router.patch('/meal-slots/:id', upload.single('image'), updateMealSlotController
 router.delete('/meal-slots/:id', deleteMealSlotController);
 router.patch('/meal-slots/:id/status', toggleMealSlotStatusController);
 router.patch('/meal-slots/:id/order', updateMealSlotOrderController);
+
+// ----- MyMeal Menu Management -----
+router.use('/menu-management', menuManagementRoutes);
 
 // ----- Broadcast Notifications -----
 router.post('/notifications/broadcast', notificationBroadcastController.createBroadcastNotificationController);
@@ -252,6 +256,7 @@ router.patch('/dining/requests/:id/reject', diningAdminController.rejectDiningRe
 router.get('/orders', orderController.listOrdersAdminController);
 router.get('/orders/:orderId', orderController.getOrderByIdAdminController);
 router.delete('/orders/:orderId', orderController.deleteOrderAdminController);
+router.patch('/orders/:orderId/status', orderController.updateOrderStatusAdminController);
 router.post('/orders/:orderId/assign-delivery', orderController.assignDeliveryPartnerController);
 
 // ----- Subscriptions -----
@@ -282,5 +287,6 @@ router.patch('/app-intro-ads/:id/toggle', appIntroAdController.toggleAppIntroAdS
 router.delete('/app-intro-ads/:id', appIntroAdController.deleteAppIntroAd);
 
 export default router;
+
 
 

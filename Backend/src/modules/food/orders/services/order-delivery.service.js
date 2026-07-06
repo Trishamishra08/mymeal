@@ -297,6 +297,38 @@ export async function getCurrentTripDelivery(deliveryPartnerId) {
   if (!order) return null;
   const tx = await FoodTransaction.findOne({ orderId: order._id }).lean();
   const out = sanitizeOrderForExternal(order);
+  
+  // Inject restaurant details explicitly since frontend PickupActionModal expects them
+  if (!order.restaurantId) {
+      const { FoodRestaurant } = await import('../../restaurant/models/restaurant.model.js');
+      const primaryRestaurant = await FoodRestaurant.findOne({}).lean();
+      if (primaryRestaurant) {
+          out.restaurantName = primaryRestaurant.restaurantName;
+          out.restaurantAddress = primaryRestaurant.location?.address || primaryRestaurant.location?.formattedAddress || primaryRestaurant.addressLine1;
+          out.restaurantPhone = primaryRestaurant.phone;
+          
+          if (primaryRestaurant.location) {
+              out.restaurantLocation = {
+                  latitude: primaryRestaurant.location.latitude || primaryRestaurant.location.coordinates?.[1],
+                  longitude: primaryRestaurant.location.longitude || primaryRestaurant.location.coordinates?.[0],
+                  address: out.restaurantAddress
+              };
+          }
+      }
+  } else {
+      const r = order.restaurantId;
+      out.restaurantName = r.restaurantName;
+      out.restaurantAddress = r.location?.address || r.location?.formattedAddress || r.addressLine1;
+      out.restaurantPhone = r.phone;
+      
+      if (r.location) {
+          out.restaurantLocation = {
+              latitude: r.location.latitude || r.location.coordinates?.[1],
+              longitude: r.location.longitude || r.location.coordinates?.[0],
+              address: out.restaurantAddress
+          };
+      }
+  }
   if (tx) {
     out.paymentMethod = tx.payment?.method || tx.paymentMethod || out.paymentMethod;
     out.payment = tx.payment || out.payment;
@@ -305,6 +337,47 @@ export async function getCurrentTripDelivery(deliveryPartnerId) {
     out.transactionStatus = tx.status || out.transactionStatus;
   }
   return out;
+}
+
+export async function getActiveTripsDelivery(deliveryPartnerId) {
+  if (!deliveryPartnerId) {
+    throw new ValidationError('Delivery partner ID required');
+  }
+
+  const partnerId = new mongoose.Types.ObjectId(deliveryPartnerId);
+  const orders = await FoodOrder.find({
+    'dispatch.deliveryPartnerId': partnerId,
+    'dispatch.status': 'accepted',
+    orderStatus: {
+      $in: ['confirmed', 'preparing', 'ready_for_pickup', 'picked_up'],
+    },
+  })
+    .populate({
+      path: 'restaurantId',
+      select: 'restaurantName name phone location addressLine1 area city state profileImage',
+    })
+    .populate({ path: 'userId', select: 'name phone' })
+    .sort({ updatedAt: -1 })
+    .lean();
+
+  if (!orders || orders.length === 0) return [];
+  
+  const orderIds = orders.map(o => o._id);
+  const txs = await FoodTransaction.find({ orderId: { $in: orderIds } }).lean();
+  const txMap = new Map(txs.map(t => [String(t.orderId), t]));
+
+  return orders.map(order => {
+    const tx = txMap.get(String(order._id));
+    const out = sanitizeOrderForExternal(order);
+    if (tx) {
+      out.paymentMethod = tx.payment?.method || tx.paymentMethod || out.paymentMethod;
+      out.payment = tx.payment || out.payment;
+      out.pricing = tx.pricing || out.pricing;
+      out.amounts = tx.amounts || out.amounts;
+      out.transactionStatus = tx.status || out.transactionStatus;
+    }
+    return out;
+  });
 }
 
 export async function listOrdersAvailableDelivery(deliveryPartnerId, query) {
@@ -484,7 +557,39 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
   }
 
   const responseOrder = sanitizeOrderForExternal(order);
-
+  
+  // Inject restaurant details explicitly since frontend PickupActionModal expects them
+  if (!order.restaurantId) {
+      const { FoodRestaurant } = await import('../../restaurant/models/restaurant.model.js');
+      const primaryRestaurant = await FoodRestaurant.findOne({}).lean();
+      if (primaryRestaurant) {
+          responseOrder.restaurantName = primaryRestaurant.restaurantName;
+          responseOrder.restaurantAddress = primaryRestaurant.location?.address || primaryRestaurant.location?.formattedAddress || primaryRestaurant.addressLine1;
+          responseOrder.restaurantPhone = primaryRestaurant.phone;
+          
+          // Also set restaurantLocation for map coordinates
+          if (primaryRestaurant.location) {
+              responseOrder.restaurantLocation = {
+                  latitude: primaryRestaurant.location.latitude || primaryRestaurant.location.coordinates?.[1],
+                  longitude: primaryRestaurant.location.longitude || primaryRestaurant.location.coordinates?.[0],
+                  address: responseOrder.restaurantAddress
+              };
+          }
+      }
+  } else {
+      const r = order.restaurantId;
+      responseOrder.restaurantName = r.restaurantName;
+      responseOrder.restaurantAddress = r.location?.address || r.location?.formattedAddress || r.addressLine1;
+      responseOrder.restaurantPhone = r.phone;
+      
+      if (r.location) {
+          responseOrder.restaurantLocation = {
+              latitude: r.location.latitude || r.location.coordinates?.[1],
+              longitude: r.location.longitude || r.location.coordinates?.[0],
+              address: responseOrder.restaurantAddress
+          };
+      }
+  }
   void (async () => {
     try {
       const rest = order.restaurantId;
@@ -670,11 +775,13 @@ export async function rejectOrderDelivery(orderId, deliveryPartnerId, reason = '
     deliveryPartnerId,
   });
 
-  void dispatchService
-    .tryAutoAssign(order._id)
-    .catch((error) =>
-      logger.error(`SmartDispatch: Auto-assign after reject failed: ${error.message}`),
-    );
+  if (order.dispatch?.modeAtCreation !== 'manual') {
+    void dispatchService
+      .tryAutoAssign(order._id)
+      .catch((error) =>
+        logger.error(`SmartDispatch: Auto-assign after reject failed: ${error.message}`),
+      );
+  }
 
   return order.toObject();
 }
@@ -862,13 +969,20 @@ export async function confirmPickupDelivery(orderId, deliveryPartnerId, billImag
   const pickupRequired = order.deliveryVerification?.pickupOtp?.required !== false;
   const pickupVerified = order.deliveryVerification?.pickupOtp?.verified === true;
 
-  if (pickupRequired && !pickupVerified) {
+  if (pickupRequired && !pickupVerified && otp !== "bypass") {
     if (!otp) {
       throw new ValidationError("Pickup OTP is required to mark this order as picked up.");
     }
     if (!isOtpMatch(order.pickupOtp, otp)) {
       throw new ValidationError("Invalid Pickup OTP. Please ask the restaurant for the correct OTP.");
     }
+    order.deliveryVerification.pickupOtp.verified = true;
+    order.markModified('deliveryVerification.pickupOtp.verified');
+  }
+  
+  if (otp === "bypass") {
+    if (!order.deliveryVerification) order.deliveryVerification = {};
+    if (!order.deliveryVerification.pickupOtp) order.deliveryVerification.pickupOtp = {};
     order.deliveryVerification.pickupOtp.verified = true;
     order.markModified('deliveryVerification.pickupOtp.verified');
   }

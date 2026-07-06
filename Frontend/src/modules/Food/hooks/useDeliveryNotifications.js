@@ -887,6 +887,20 @@ export const useDeliveryNotifications = () => {
       handleIncomingOrderAlert(orderData);
     });
 
+    // Listen for direct manual admin assignment (new_order_assigned)
+    socketRef.current.on('new_order_assigned', (orderData) => {
+      debugLog('New order manually assigned received via socket', {
+        orderId: orderData?.orderId || orderData?.orderMongoId || orderData?._id,
+        dispatchStatus: orderData?.dispatchStatus,
+      });
+      if (!isRiderOnline()) {
+        debugLog('?? Ignored new_order_assigned - rider is offline');
+        return;
+      }
+      setNewOrder(orderData);
+      handleIncomingOrderAlert(orderData);
+    });
+
     socketRef.current.on('play_notification_sound', (data) => {
       debugLog('play_notification_sound received', {
         orderId: data?.orderId || data?.orderMongoId || data?.order_id,

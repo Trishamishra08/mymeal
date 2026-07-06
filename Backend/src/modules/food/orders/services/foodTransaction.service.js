@@ -120,6 +120,7 @@ export async function createInitialTransaction(order) {
     
     // Split logic
     const totalCustomerPaid = order.pricing?.total || 0;
+    const hasRestaurantLink = Boolean(order.restaurantId) && order.orderType !== 'one_time_tiffin';
     const riderShare = order.riderEarning || 0;
     
     const restaurantCommissionFromOrder = Number(order.pricing?.restaurantCommission);
@@ -137,7 +138,9 @@ export async function createInitialTransaction(order) {
     const paymentGatewayFee = commissionSnapshot.paymentGatewayFee || 0;
     const tcs = commissionSnapshot.tcs || 0;
 
-    const restaurantNet = (order.pricing?.subtotal || 0) + (order.pricing?.packagingFee || 0) - restaurantCommission - gstOnItem - gstOnCommission - paymentGatewayFee - tcs;
+    const restaurantNet = hasRestaurantLink
+        ? (order.pricing?.subtotal || 0) + (order.pricing?.packagingFee || 0) - restaurantCommission - gstOnItem - gstOnCommission - paymentGatewayFee - tcs
+        : 0;
     
     const calculatedPlatformNetProfit = (order.pricing?.platformFee || 0) + (order.pricing?.deliveryFee || 0) + restaurantCommission + gstOnItem + paymentGatewayFee + tcs - riderShare;
     const platformNetProfit = order.platformProfit !== undefined 

@@ -10,6 +10,7 @@ import uploadRoutes from '../modules/uploads/routes/upload.routes.js';
 import restaurantAdminRoutes from '../modules/food/admin/routes/admin.routes.js';
 import userRoutes from '../modules/food/user/routes/user.routes.js';
 import orderUserRoutes from '../modules/food/orders/routes/order.routes.user.js';
+import { getOneTimeTiffinMenuController } from '../modules/food/orders/controllers/order.controller.js';
 import paymentRoutes from '../core/payments/payment.routes.js';
 import fcmRoutes from '../core/notifications/fcm.routes.js';
 import notificationRoutes from '../core/notifications/notification.routes.js';
@@ -23,6 +24,7 @@ import appConfigRoutes from '../core/appConfig/appConfig.routes.js';
 import promocodeRoutes from './promocodeRoutes.js';
 import { requireZone } from '../middlewares/zone.middleware.js';
 import envSettingRoutes from './admin/envSettingRoutes.js';
+import { listPublicMenuCategories } from '../modules/food/admin/controllers/menuManagement.controller.js';
 
 const router = express.Router();
 
@@ -48,6 +50,8 @@ router.use('/v1/food/search', searchRoutes);
 router.use('/v1/food/subscriptions', authMiddleware, requireRoles('USER'), subscriptionUserRoutes);
 router.use('/v1/food/promocodes', promocodeRoutes);
 router.get('/v1/food/dining/categories/public', getPublicDiningCategories);
+router.get('/v1/food/menu-management/categories/public', listPublicMenuCategories);
+router.get('/v1/food/orders/one-time-tiffin/menu/public', getOneTimeTiffinMenuController);
 router.get('/v1/food/dining/restaurants/public', getPublicDiningRestaurants);
 router.get('/v1/food/dining/restaurants/:restaurantId/occupied-seats/public', getPublicRestaurantOccupiedSeats);
 
@@ -76,5 +80,6 @@ router.use('/fcm-tokens', fcmRoutes);
 router.get('/v1/admin/queues', authMiddleware, requireRoles('ADMIN'), getQueuesController);
 
 export default router;
+
 
 

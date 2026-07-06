@@ -65,8 +65,8 @@ export const NewOrderModal = ({ order, onAccept, onReject, onMinimize }) => {
   const earnings = order.earnings || order.riderEarning || (order.orderAmount ? order.orderAmount * 0.1 : 0);
   const baseEarnings = Math.max(0, earnings - bonus);
 
-  const restaurantName = order.restaurantName || order.restaurant_name || (order.restaurantId?.name) || 'Restaurant';
-  const restaurantAddress = order.restaurantAddress || order.restaurant_address || (order.restaurantId?.location?.address) || 'Address not available';
+  const restaurantName = order.restaurantName || order.restaurant_name || order.restaurantId?.restaurantName || order.restaurantId?.name || 'Restaurant';
+  const restaurantAddress = order.restaurantAddress || order.restaurant_address || order.restaurantId?.address || order.restaurantId?.location?.address || 'Address not available';
   const deliveryAddress = order?.deliveryAddress || {};
 
   const geoCoords =
@@ -134,12 +134,7 @@ export const NewOrderModal = ({ order, onAccept, onReject, onMinimize }) => {
           <div>
             <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest mb-1">Incoming Request</p>
             <div className="flex items-end gap-2">
-              <h2 className="text-2xl sm:text-4xl font-bold tracking-tighter">₹{Number(earnings || 0).toFixed(2)}</h2>
-              {bonus > 0 && (
-                <p className="text-white/70 text-xs font-semibold mb-1">
-                  (₹{Number(baseEarnings).toFixed(0)} + ₹{Number(bonus).toFixed(0)} Bonus)
-                </p>
-              )}
+              <h2 className="text-2xl sm:text-4xl font-bold tracking-tighter">New Order</h2>
             </div>
           </div>
           <div className="bg-white/20 border border-white/30 rounded-2xl sm:rounded-3xl px-3 sm:px-6 py-2 sm:py-3 text-white font-bold text-lg sm:text-2xl shadow-inner tabular-nums">

@@ -1,6 +1,7 @@
 import { sendResponse } from '../../../../utils/response.js';
 import * as orderService from '../services/order.service.js';
 import * as foodOrderPaymentService from '../services/foodOrderPayment.service.js';
+import * as oneTimeTiffinService from '../services/oneTimeTiffin.service.js';
 import {
     validateCalculateOrderDto,
     validateCreateOrderDto,
@@ -12,6 +13,34 @@ import {
     validateOrderRatingsDto
 } from '../validators/order.validator.js';
 
+export async function getOneTimeTiffinMenuController(req, res, next) {
+    try {
+        const result = await oneTimeTiffinService.getOneTimeTiffinMenu(req.query);
+        return sendResponse(res, 200, 'One-time tiffin menu retrieved', result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function createOneTimeTiffinOrderController(req, res, next) {
+    try {
+        const userId = req.user?.userId;
+        const result = await oneTimeTiffinService.createOneTimeTiffinOrder(userId, req.body || {});
+        return sendResponse(res, 201, 'One-time tiffin order created', result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function verifyOneTimeTiffinPaymentController(req, res, next) {
+    try {
+        const userId = req.user?.userId;
+        const result = await oneTimeTiffinService.verifyOneTimeTiffinPayment(userId, req.body || {});
+        return sendResponse(res, 200, 'One-time tiffin payment verified', result);
+    } catch (err) {
+        next(err);
+    }
+}
 export async function calculateOrderController(req, res, next) {
     try {
         const userId = req.user?.userId;
@@ -125,6 +154,7 @@ export async function updateOrderInstructionsController(req, res, next) {
     }
 }
 
+
 export async function getDispatchSettingsController(req, res, next) {
     try {
         const result = await orderService.getDispatchSettings();
@@ -161,6 +191,18 @@ export async function getOrderByIdRestaurantController(req, res, next) {
         const orderId = req.params.orderId;
         const order = await orderService.getOrderById(orderId, { restaurantId });
         return sendResponse(res, 200, 'Order retrieved', { order });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function updateOrderStatusAdminController(req, res, next) {
+    try {
+        const adminId = req.user?.userId;
+        const orderId = req.params.orderId;
+        const dto = validateOrderStatusDto(req.body);
+        const order = await orderService.updateOrderStatusAdmin(orderId, adminId, dto.orderStatus, dto.note);
+        return sendResponse(res, 200, 'Order status updated by admin', { order });
     } catch (err) {
         next(err);
     }
@@ -295,6 +337,16 @@ export async function getCurrentTripDeliveryController(req, res, next) {
         const deliveryPartnerId = req.user?.userId;
         const order = await orderService.getCurrentTripDelivery(deliveryPartnerId);
         return sendResponse(res, 200, 'Current trip retrieved', { activeOrder: order });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function getActiveTripsDeliveryController(req, res, next) {
+    try {
+        const deliveryPartnerId = req.user?.userId;
+        const orders = await orderService.getActiveTripsDelivery(deliveryPartnerId);
+        return sendResponse(res, 200, 'Active trips retrieved', { activeOrders: orders });
     } catch (err) {
         next(err);
     }

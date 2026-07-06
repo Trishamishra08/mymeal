@@ -67,6 +67,22 @@ export const adminSidebarMenu = [
   },
   {
     type: "section",
+    label: "MENU MANAGEMENT",
+    items: [
+      {
+        type: "expandable",
+        label: "Menu Management",
+        icon: "ClipboardList",
+        subItems: [
+          { label: "Categories", path: "/admin/food/menu-management/categories" },
+          { label: "Items", path: "/admin/food/menu-management/items" },
+          { label: "Today's Menu", path: "/admin/food/menu-management/today" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "section",
     label: "RESTAURANT MANAGEMENT",
     items: [
       {
@@ -307,5 +323,7 @@ export const adminSidebarMenu = [
     ],
   },
 ];
+
+
 
 

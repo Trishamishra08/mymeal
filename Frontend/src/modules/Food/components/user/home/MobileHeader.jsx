@@ -87,35 +87,7 @@ export default function MobileHeader({
               </div>
             </div>
 
-            <div className="mt-4 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleSearchFocus}
-                className="h-10 flex-1 bg-white rounded-full border border-gray-200 shadow-sm px-3 flex items-center gap-2 text-left"
-              >
-                <Search className="h-4 w-4 text-gray-400" />
-                <span className="text-xs font-medium text-gray-400 truncate">
-                  Search meals, plans...
-                </span>
-                <Mic className="h-4 w-4 text-gray-400 ml-auto" />
-              </button>
-              
-              <button
-                ref={toggleRef}
-                type="button"
-                onClick={() => handleVegModeChange?.(!vegMode)}
-                className={`h-10 px-3 rounded-full flex items-center gap-1.5 shadow-sm transition-colors border border-transparent ${
-                  vegMode ? "bg-[#1F6B3A] text-white" : "bg-white border-gray-200 text-gray-700"
-                }`}
-                aria-label="Toggle veg mode"
-              >
-                <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${vegMode ? 'border-white' : 'border-[#1F6B3A]'}`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${vegMode ? 'bg-white' : 'bg-[#1F6B3A]'}`} />
-                </div>
-                <span className="text-xs font-bold whitespace-nowrap">Veg Mode</span>
-                <ChevronDown className={`h-3 w-3 ${vegMode ? 'text-white' : 'text-gray-500'}`} />
-              </button>
-            </div>
+
           </header>
   );
 }

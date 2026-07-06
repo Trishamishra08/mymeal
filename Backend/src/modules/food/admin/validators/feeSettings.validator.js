@@ -19,6 +19,7 @@ const feeSettingsUpsertSchema = z.object({
     gstOnPlatformFee: z.number().min(0).max(100).nullable().optional(),
     gstOnPackagingFee: z.number().min(0).max(100).nullable().optional(),
     deliveryBonusAmount: z.number().min(0).nullable().optional(),
+    oneTimeTiffinPrice: z.number().min(0).nullable().optional(),
     dispatchRadiusTiers: z.array(z.number().min(0)).optional(),
     isActive: z.boolean().optional()
 });
@@ -64,6 +65,8 @@ export const validateFeeSettingsUpsertDto = (body) => {
             body?.gstOnPackagingFee === null ? null : body?.gstOnPackagingFee !== undefined ? Number(body.gstOnPackagingFee) : undefined,
         deliveryBonusAmount:
             body?.deliveryBonusAmount === null ? null : body?.deliveryBonusAmount !== undefined ? Number(body.deliveryBonusAmount) : undefined,
+        oneTimeTiffinPrice:
+            body?.oneTimeTiffinPrice === null ? null : body?.oneTimeTiffinPrice !== undefined ? Number(body.oneTimeTiffinPrice) : undefined,
         dispatchRadiusTiers: Array.isArray(body?.dispatchRadiusTiers) ? body.dispatchRadiusTiers.map(Number) : undefined,
         isActive: body?.isActive !== undefined ? Boolean(body.isActive) : undefined
     };
@@ -94,4 +97,3 @@ export const validateFeeSettingsUpsertDto = (body) => {
 
     return result.data;
 };
-

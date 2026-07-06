@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, ChevronDown, Search, Mic, Bell, CheckCircle2, Tag, Gift, AlertCircle, Clock, BellOff, X, IndianRupee } from 'lucide-react';
@@ -178,20 +178,7 @@ export default function HomeHeader({
               </span>
             </div>
           </div>
-
-          {/* Right Actions: Veg Toggle & Bell */}
           <div className="flex items-center gap-2.5">
-            {/* Pure Veg Toggle */}
-            <div 
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-full border transition-all duration-300 ${vegMode ? 'border-white/40 bg-white/10' : 'border-white/10 bg-white/5'}`}
-              onClick={() => handleVegModeChange?.(!vegMode)}
-            >
-              <div className={`w-3 h-3 rounded-sm border flex items-center justify-center transition-colors ${vegMode ? 'border-white bg-white' : 'border-white/30'}`}>
-                {vegMode && <div className="w-1 h-1 rounded-full bg-[#00b09b]" />}
-              </div>
-              <span className={`text-[8px] font-black uppercase tracking-tight ${vegMode ? 'text-white' : 'text-white/60'}`}>Veg</span>
-            </div>
- 
             <Popover>
               <PopoverTrigger asChild>
                 <div className="h-8 w-8 relative flex items-center justify-center rounded-full bg-white/10 border border-white/10 cursor-pointer active:scale-90 transition-all">
@@ -245,39 +232,9 @@ export default function HomeHeader({
           </div>
         </div>
 
-        <div
-          className="relative bg-white rounded-2xl flex items-center px-4 py-3 shadow-lg border border-black/5 cursor-pointer active:scale-[0.98] transition-all duration-300 max-w-[95%] mx-auto"
-          onClick={handleSearchFocus}
-        >
-          <Search className="h-4.5 w-4.5 text-[#7e3866] mr-2 shrink-0" strokeWidth={3} />
-          
-          <div className="flex-1 overflow-hidden relative h-5">
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={placeholderIndex}
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -10, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="absolute inset-0 text-sm font-bold text-gray-400 truncate flex items-center"
-              >
-                {placeholders?.[placeholderIndex] || 'Search'}
-              </motion.span>
-            </AnimatePresence>
-          </div>
 
-          <div className="flex items-center gap-2 pl-2">
-            <div className="h-4 w-[1px] bg-gray-200" />
-            <Mic 
-              className="h-4.5 w-4.5 text-[#7e3866]" 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleVoiceSearchClick?.();
-              }}
-            />
-          </div>
-        </div>
       </div>
     </div>
   );
 }
+

@@ -1086,10 +1086,7 @@ export default function OrderTracking() {
     pollRef.current = poll;
     terminalPollStopRef.current = false;
 
-    if (isInitialPollRequestedRef.current !== orderId) {
-      isInitialPollRequestedRef.current = orderId;
-      poll(true);
-    }
+    poll(true);
 
     return () => {
       isSubscribed = false;

@@ -9,7 +9,10 @@ import {
     cancelOrderController,
     submitOrderRatingsController,
     getOrderDropOtpUserController,
-    updateOrderInstructionsController
+    updateOrderInstructionsController,
+    getOneTimeTiffinMenuController,
+    createOneTimeTiffinOrderController,
+    verifyOneTimeTiffinPaymentController
 } from '../controllers/order.controller.js';
 
 const router = express.Router();
@@ -17,6 +20,9 @@ const router = express.Router();
 router.post('/calculate', calculateOrderController);
 router.post('/', createOrderController);
 router.post('/verify-payment', verifyPaymentController);
+router.get('/one-time-tiffin/menu', getOneTimeTiffinMenuController);
+router.post('/one-time-tiffin/create-order', createOneTimeTiffinOrderController);
+router.post('/one-time-tiffin/verify-payment', verifyOneTimeTiffinPaymentController);
 router.get('/', listOrdersUserController);
 router.get('/:orderId/payments', getOrderPaymentsUserController);
 router.get('/:orderId/drop-otp', getOrderDropOtpUserController);

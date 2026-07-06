@@ -1,4 +1,4 @@
-﻿/**
+/**
  * API layer - auth connected to new backend; rest stubbed for UI compatibility.
  */
 
@@ -205,9 +205,61 @@ export const adminAPI = {
     const fcmToken = typeof localStorage !== "undefined" ? localStorage.getItem("fcm_web_registered_token_admin") : null;
     return authService.logout(token, fcmToken, "web");
   },
+  // Orders
+  acceptOrder: (orderId, _prepTimeMins = null) =>
+    apiClient.patch(
+      `/food/admin/orders/${String(orderId)}/status`,
+      { orderStatus: "confirmed" },
+      { contextModule: "admin" }
+    ),
+  rejectOrder: (orderId, reason = "") =>
+    apiClient.patch(
+      `/food/admin/orders/${String(orderId)}/status`,
+      { orderStatus: "cancelled_by_admin", note: reason },
+      { contextModule: "admin" }
+    ),
+
   // Restaurant approvals and join requests
   getPendingRestaurants: () =>
     apiClient.get("/food/admin/restaurants/pending", {
+      contextModule: "admin",
+    }),
+  // Menu Management APIs
+  getMenuCategories: (params = {}) =>
+    apiClient.get("/food/admin/menu-management/categories", {
+      params,
+      contextModule: "admin",
+    }),
+  getMenuItems: (params = {}) =>
+    apiClient.get("/food/admin/menu-management/items", {
+      params,
+      contextModule: "admin",
+    }),
+  getTodayMenu: (params = {}) =>
+    apiClient.get("/food/admin/menu-management/today", {
+      params,
+      contextModule: "admin",
+    }),
+  saveTodayMenu: (data) =>
+    apiClient.post("/food/admin/menu-management/today", data, {
+      contextModule: "admin",
+    }),
+  duplicateYesterdayMenu: (params = {}) =>
+    apiClient.get("/food/admin/menu-management/today/duplicate-yesterday", {
+      params,
+      contextModule: "admin",
+    }),
+  deleteTodayMenu: (id) =>
+    apiClient.delete(`/food/admin/menu-management/today/${id}`, {
+      contextModule: "admin",
+    }),
+  getMenuHistory: (params = {}) =>
+    apiClient.get("/food/admin/menu-management/history", {
+      params,
+      contextModule: "admin",
+    }),
+  getMenuStats: () =>
+    apiClient.get("/food/admin/menu-management/stats", {
       contextModule: "admin",
     }),
   /** List restaurant complaints (admin). */
@@ -261,6 +313,16 @@ export const adminAPI = {
       params,
       contextModule: "admin",
     }),
+  getAvailableDeliveryPartners: () =>
+    apiClient.get("/food/admin/delivery/available-partners", {
+      contextModule: "admin",
+    }),
+  assignDeliveryPartner: (orderId, partnerId) =>
+    apiClient.post(
+      `/food/admin/orders/${orderId}/assign-delivery`,
+      { deliveryPartnerId: partnerId },
+      { contextModule: "admin" },
+    ),
   getDeliverymanReviews: (params = {}) =>
     apiClient.get("/food/admin/delivery/reviews", {
       params,
@@ -1966,6 +2028,8 @@ export const deliveryAPI = {
   })(),
   /** GET /food/delivery/current - fallback for some UI hooks */
   getCurrentDelivery: () => apiClient.get("/food/delivery/orders/current", { contextModule: "delivery" }),
+  /** GET /food/delivery/orders/active - list of all active/accepted orders */
+  getActiveOrders: () => apiClient.get("/food/delivery/orders/active", { contextModule: "delivery" }),
   acceptOrder: (orderId, body = {}) =>
     apiClient.patch(
       `/food/delivery/orders/${String(orderId)}/accept`,
@@ -2394,6 +2458,18 @@ export const orderAPI = {
     apiClient.post("/food/orders", payload ?? {}, { contextModule: "user" }),
   verifyPayment: (body) =>
     apiClient.post("/food/orders/verify-payment", body ?? {}, {
+      contextModule: "user",
+    }),
+  getOneTimeTiffinMenu: () =>
+    apiClient.get("/food/orders/one-time-tiffin/menu", {
+      contextModule: "user",
+    }),
+  createOneTimeTiffinOrder: (payload) =>
+    apiClient.post("/food/orders/one-time-tiffin/create-order", payload, {
+      contextModule: "user",
+    }),
+  verifyOneTimeTiffinPayment: (payload) =>
+    apiClient.post("/food/orders/one-time-tiffin/verify-payment", payload, {
       contextModule: "user",
     }),
   getOrders: (params = {}) =>

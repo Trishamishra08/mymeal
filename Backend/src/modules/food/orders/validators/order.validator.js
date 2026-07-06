@@ -133,7 +133,8 @@ export function validateOrderStatusDto(body) {
             'ready_for_pickup',
             'picked_up',
             'delivered',
-            'cancelled_by_restaurant'
+            'cancelled_by_restaurant',
+            'cancelled_by_admin'
         ]),
         note: z.string().optional()
     });

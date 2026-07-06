@@ -12,9 +12,16 @@ export const getAppConfigs = async (req, res) => {
 export const getAppConfigByName = async (req, res) => {
     try {
         const { appName } = req.params;
-        const config = await AppConfig.findOne({ appName });
+        let config = await AppConfig.findOne({ appName });
         if (!config) {
-            return res.status(404).json({ success: false, message: 'Config not found' });
+            // Return default config instead of 404 to prevent app crashes on fresh DB
+            config = {
+                appName,
+                primaryColor: '#124b89', // Default Blue
+                secondaryColor: '#F97316', // Default Orange
+                logoUrl: '',
+                fontFamily: 'Inter, sans-serif'
+            };
         }
         res.status(200).json({ success: true, data: config });
     } catch (error) {

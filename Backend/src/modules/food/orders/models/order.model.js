@@ -28,7 +28,7 @@ const deliveryAddressSchema = new mongoose.Schema(
         zipCode: { type: String, default: '', trim: true },
         phone: { type: String, default: '', trim: true },
         location: {
-            type: { type: String, enum: ['Point'], default: 'Point' },
+            type: { type: String, enum: ['Point'] },
             coordinates: { type: [Number], default: undefined }
         }
     },
@@ -128,7 +128,7 @@ const subscriptionUsageSchema = new mongoose.Schema(
 );
 const dispatchSchema = new mongoose.Schema(
     {
-        modeAtCreation: { type: String, enum: ['auto'], default: 'auto' },
+        modeAtCreation: { type: String, enum: ['auto', 'manual'], default: 'auto' },
         status: {
             type: String,
             enum: ['unassigned', 'assigned', 'accepted', 'rejected', 'cancelled'],
@@ -241,7 +241,7 @@ const orderSchema = new mongoose.Schema(
         restaurantId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'FoodRestaurant',
-            required: true
+            required: false
         },
         zoneId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -333,9 +333,17 @@ const orderSchema = new mongoose.Schema(
         /** Latest rider location for this specific order (GeoJSON Point) */
         lastRiderLocation: {
             type: { type: String, enum: ['Point'] },
-            coordinates: { type: [Number] }
+            coordinates: { type: [Number], default: undefined }
         },
-
+        orderType: {
+            type: String,
+            enum: ['standard', 'one_time_tiffin', 'subscription'],
+            default: 'standard'
+        },
+        tiffinOrder: {
+            type: mongoose.Schema.Types.Mixed,
+            default: undefined
+        }
     },
     {
         collection: 'food_orders',

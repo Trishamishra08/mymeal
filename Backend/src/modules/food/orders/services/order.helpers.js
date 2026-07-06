@@ -55,7 +55,7 @@ export function sanitizeOrderForExternal(orderDoc) {
   }
   o.orderMongoId = (o._id || orderDoc?._id || "").toString();
   // Ensure orderId field for UI always contains the pretty ID
-  o.orderId = o.order_id || o.orderMongoId; 
+  o.orderId = o.order_id || o.orderMongoId;
   return o;
 }
 
@@ -96,9 +96,9 @@ export function buildOrderIdentityFilter(orderIdOrMongoId) {
   if (!raw) return null;
   if (mongoose.isValidObjectId(raw))
     return { _id: new mongoose.Types.ObjectId(raw) };
-  
+
   // Search BOTH underscore and camelCase variants for robust lookup
-  return { 
+  return {
     $or: [
         { order_id: raw },
         { orderId: raw }
@@ -140,7 +140,7 @@ export function normalizeOrderForClient(orderDoc) {
       order?.dispatch?.deliveryPartnerId || order?.deliveryPartnerId || null,
     rating: order?.ratings?.restaurant?.rating ?? order?.rating ?? null,
     restaurantNote: order?.restaurantNote || "",
-    cancellationReason: (order?.orderStatus?.includes('cancel') || order?.status?.includes('cancel')) 
+    cancellationReason: (order?.orderStatus?.includes('cancel') || order?.status?.includes('cancel'))
       ? (order.statusHistory?.findLast(h => h.to?.includes('cancel'))?.note || "")
       : null,
     deliveryState: {
@@ -191,6 +191,8 @@ export function buildDeliverySocketPayload(orderDoc, restaurantDoc = null) {
     orderId: order?.order_id || order?._id?.toString?.(),
     status: orderDoc?.orderStatus || order?.orderStatus,
     items: order?.items || [],
+    orderType: order?.orderType || "regular",
+    tiffinOrder: order?.tiffinOrder || null,
     pricing: order?.pricing,
     total: order?.pricing?.total,
     payment: order?.payment,
@@ -300,13 +302,13 @@ export const STATUS_PRIORITY = {
 export function isStatusAdvance(current, next) {
   // If current status is missing, it's effectively 'created' or start of flow
   if (!current) return true;
-  
+
   const currentPrio = STATUS_PRIORITY[current] || 0;
   const nextPrio = STATUS_PRIORITY[next] || 0;
 
   // Terminal states (100) cannot transition to anything else
   if (currentPrio >= 100) return false;
-  
+
   // Delivered (80) cannot transition to anything (except maybe cancellation if allowed, but here we say no)
   if (currentPrio === 80) return false;
 

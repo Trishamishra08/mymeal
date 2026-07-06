@@ -36,6 +36,9 @@ const RestaurantsBulkExport = lazy(() => import("@food/pages/admin/restaurant/Re
 // Food Management
 const FoodsList = lazy(() => import("@food/pages/admin/foods/FoodsList"));
 const AddonsList = lazy(() => import("@food/pages/admin/addons/AddonsList"));
+const MenuCategories = lazy(() => import("@food/pages/admin/menu-management/MenuCategories"));
+const MenuItems = lazy(() => import("@food/pages/admin/menu-management/MenuItems"));
+const TodaysMenu = lazy(() => import("@food/pages/admin/menu-management/TodaysMenu"));
 // Promotions Management
 const BasicCampaign = lazy(() => import("@food/pages/admin/campaigns/BasicCampaign"));
 const FoodCampaign = lazy(() => import("@food/pages/admin/campaigns/FoodCampaign"));
@@ -209,6 +212,9 @@ export default function AdminRouter() {
             <Route path="foods" element={<FoodsList />} />
             <Route path="food/list" element={<FoodsList />} />
             <Route path="addons" element={<AddonsList />} />
+            <Route path="menu-management/categories" element={<MenuCategories />} />
+            <Route path="menu-management/items" element={<MenuItems />} />
+            <Route path="menu-management/today" element={<TodaysMenu />} />
 
             {/* PROMOTIONS, CUSTOMERS, DELIVERYMEN, etc. */}
             <Route path="campaigns/basic" element={<BasicCampaign />} />
@@ -320,3 +326,5 @@ export default function AdminRouter() {
     </Suspense>
   );
 }
+
+

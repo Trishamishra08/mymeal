@@ -20,6 +20,7 @@ import ActionSlider from '@/modules/DeliveryV2/components/ui/ActionSlider';
 import PocketV2 from '@/modules/DeliveryV2/pages/PocketV2';
 import HistoryV2 from '@/modules/DeliveryV2/pages/HistoryV2';
 import ProfileV2 from '@/modules/DeliveryV2/pages/ProfileV2';
+import OrdersListV2 from '@/modules/DeliveryV2/pages/OrdersListV2';
 
 // Icons
 import { 
@@ -599,9 +600,11 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
             return null;
           };
 
-          const resLoc = getLoc(currentPayload.restaurantId, ['latitude', 'lat'], ['longitude', 'lng']) || 
+          const resLoc = currentPayload.restaurantLocation ||
+                         getLoc(currentPayload.restaurantId, ['latitude', 'lat'], ['longitude', 'lng']) || 
                          getLoc(currentPayload, ['restaurant_lat', 'restaurantLat', 'latitude'], ['restaurant_lng', 'restaurantLng', 'longitude']);
-          const cusLoc = getLoc(currentPayload.deliveryAddress, ['latitude', 'lat'], ['longitude', 'lng']) || 
+          const cusLoc = currentPayload.customerLocation || currentPayload.deliveryLocation ||
+                         getLoc(currentPayload.deliveryAddress, ['latitude', 'lat'], ['longitude', 'lng']) || 
                          getLoc(currentPayload, ['customer_lat', 'customerLat', 'latitude'], ['customer_lng', 'customerLng', 'longitude']);
 
           setActiveOrder({
@@ -916,7 +919,7 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
       )}
 
       {/* ─── 2. MAIN CONTENT ─── */}
-      <div className={`flex-1 relative overflow-y-auto ${currentTab === 'history' || currentTab === 'profile' || currentTab === 'pocket' ? 'pt-0' : 'pt-[120px]'} no-scrollbar`}>
+      <div className={`flex-1 relative overflow-y-auto ${currentTab === 'history' || currentTab === 'profile' ? 'pt-0' : currentTab === 'orders' ? 'pt-[70px]' : 'pt-[120px]'} no-scrollbar`}>
          {currentTab === 'feed' ? (
            <div className="absolute inset-0 top-[-120px]">
              {isOnline ? (
@@ -1057,8 +1060,8 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
               </div>
             )}
            </div>
-         ) : currentTab === 'pocket' ? (
-           <PocketV2 />
+         ) : currentTab === 'orders' ? (
+           <OrdersListV2 />
          ) : currentTab === 'history' ? (
            <HistoryV2 />
          ) : (
@@ -1107,7 +1110,18 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
                         // For other errors (network, etc.), keep showing the modal so they can retry
                       }
                     }}
-                    onReject={() => { setIncomingOrder(null); clearNewOrder(); }}
+                    onReject={async () => {
+                      try {
+                        const orderIdToReject = incomingOrder.orderId || incomingOrder.orderMongoId || incomingOrder._id;
+                        if (orderIdToReject) {
+                          await deliveryAPI.rejectOrder(orderIdToReject, { reason: "Time expired or manually passed" });
+                        }
+                      } catch (err) {
+                        console.error("Failed to reject order on timeout", err);
+                      }
+                      setIncomingOrder(null); 
+                      clearNewOrder(); 
+                    }}
                     onMinimize={() => setIsModalMinimized(true)}
                   />
                 )}
@@ -1387,8 +1401,8 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
          <button onClick={() => navigate('/food/delivery/feed')} className={`flex flex-col items-center gap-1 transition-all ${currentTab === 'feed' ? 'text-gray-950 scale-110' : 'text-gray-400 opacity-70'}`}>
             <LayoutGrid className="w-6 h-6" /><span className="text-[11px] font-medium font-sans">Feed</span>
          </button>
-         <button onClick={() => navigate('/food/delivery/pocket')} className={`flex flex-col items-center gap-1 transition-all ${currentTab === 'pocket' ? 'text-gray-950 scale-110' : 'text-gray-400 opacity-70'}`}>
-            <Wallet className="w-6 h-6" /><span className="text-[11px] font-medium font-sans">Pocket</span>
+         <button onClick={() => navigate('/food/delivery/orders')} className={`flex flex-col items-center gap-1 transition-all ${currentTab === 'orders' ? 'text-gray-950 scale-110' : 'text-gray-400 opacity-70'}`}>
+            <Package className="w-6 h-6" /><span className="text-[11px] font-medium font-sans">Orders</span>
          </button>
          <button onClick={() => navigate('/food/delivery/history')} className={`flex flex-col items-center gap-1 transition-all ${currentTab === 'history' ? 'text-gray-950 scale-110' : 'text-gray-400 opacity-70'}`}>
             <History className="w-6 h-6" /><span className="text-[11px] font-medium font-sans">Trip History</span>

@@ -22,6 +22,7 @@ export default function FeeSettings() {
     gstOnPlatformFee: "",
     gstOnPackagingFee: "",
     deliveryBonusAmount: "",
+    oneTimeTiffinPrice: "",
     dispatchRadiusTiers: "2, 4, 6, 8, 10",
   })
   const [loadingFeeSettings, setLoadingFeeSettings] = useState(false)
@@ -47,6 +48,7 @@ export default function FeeSettings() {
           gstOnPlatformFee: response.data.data.feeSettings.gstOnPlatformFee ?? "",
           gstOnPackagingFee: response.data.data.feeSettings.gstOnPackagingFee ?? "",
           deliveryBonusAmount: response.data.data.feeSettings.deliveryBonusAmount ?? "",
+          oneTimeTiffinPrice: response.data.data.feeSettings.oneTimeTiffinPrice ?? "",
           dispatchRadiusTiers: response.data.data.feeSettings.dispatchRadiusTiers?.join(", ") ?? "2, 4, 6, 8, 10",
         })
       } else if (response.data.success && response.data.data.feeSettings === null) {
@@ -63,6 +65,7 @@ export default function FeeSettings() {
           gstOnPlatformFee: "",
           gstOnPackagingFee: "",
           deliveryBonusAmount: "",
+    oneTimeTiffinPrice: "",
           dispatchRadiusTiers: "2, 4, 6, 8, 10",
         })
       }
@@ -95,6 +98,7 @@ export default function FeeSettings() {
         gstOnPlatformFee: feeSettings.gstOnPlatformFee === "" ? undefined : Number(feeSettings.gstOnPlatformFee),
         gstOnPackagingFee: feeSettings.gstOnPackagingFee === "" ? undefined : Number(feeSettings.gstOnPackagingFee),
         deliveryBonusAmount: feeSettings.deliveryBonusAmount === "" ? undefined : Number(feeSettings.deliveryBonusAmount),
+        oneTimeTiffinPrice: feeSettings.oneTimeTiffinPrice === "" ? undefined : Number(feeSettings.oneTimeTiffinPrice),
         dispatchRadiusTiers: feeSettings.dispatchRadiusTiers ? feeSettings.dispatchRadiusTiers.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n)) : undefined,
         isActive: true,
       })
@@ -116,6 +120,7 @@ export default function FeeSettings() {
             gstOnPlatformFee: saved.gstOnPlatformFee ?? "",
             gstOnPackagingFee: saved.gstOnPackagingFee ?? "",
             deliveryBonusAmount: saved.deliveryBonusAmount ?? "",
+            oneTimeTiffinPrice: saved.oneTimeTiffinPrice ?? "",
             dispatchRadiusTiers: saved.dispatchRadiusTiers?.join(", ") ?? "2, 4, 6, 8, 10",
           })
         }
@@ -604,6 +609,24 @@ export default function FeeSettings() {
                   </p>
                 </div>
 
+                {/* One-Time Tiffin Price */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    One-Time Tiffin Price (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={feeSettings.oneTimeTiffinPrice}
+                    onChange={(e) => setFeeSettings({ ...feeSettings, oneTimeTiffinPrice: e.target.value })}
+                    min="0"
+                    step="1"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                    placeholder="120"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Fixed price charged per one-time tiffin quantity.
+                  </p>
+                </div>
                 {/* Delivery Bonus Amount */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-slate-700">

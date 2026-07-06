@@ -201,16 +201,7 @@ export const HistoryV2 = () => {
        {/* 4. Page Content */}
        <div className="px-4 py-2 space-y-5">
           {/* Performance Summary Banner (Matched to Image) */}
-          <div className="bg-[#E9F9F4] rounded-2xl p-6 border border-[#D1F2E8] flex justify-between items-center">
-             <div>
-                <p className="text-[11px] font-bold text-[#10B981] mb-1">COD Collected</p>
-                <h3 className="text-xl font-bold text-gray-950">₹{metrics.cod.toFixed(2)}</h3>
-             </div>
-             <div className="text-right">
-                <p className="text-[11px] font-bold text-[#10B981] mb-1">Earnings</p>
-                <h3 className="text-xl font-bold text-gray-950">₹{metrics.earnings.toFixed(2)}</h3>
-             </div>
-          </div>
+
 
           {/* Trip List */}
           {loading ? (
@@ -234,7 +225,6 @@ export const HistoryV2 = () => {
                          <div className="flex justify-between items-start mb-2">
                              <div>
                                 <h4 className="text-base font-bold text-gray-950">{trip.orderId || 'ORDER-ID'}</h4>
-                                <p className="text-sm font-medium text-gray-500 mt-0.5">{trip.restaurant || trip.restaurantName || 'Sayaji'}</p>
                                 <p className="text-xs text-gray-400 font-medium mt-0.5 line-clamp-1">{extractItems(trip)}</p>
                              </div>
                              <span className={`text-sm font-bold ${isCompleted ? 'text-[#10B981]' : isCancelled ? 'text-red-500' : 'text-orange-500'}`}>
@@ -242,24 +232,10 @@ export const HistoryV2 = () => {
                              </span>
                          </div>
                          
-                         <div className="flex gap-2 mb-4 mt-3">
-                             <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${(isCOD || isQR) ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-[#10B981]'}`}>
-                                {isQR ? 'COD (QR)' : isCOD ? 'COD' : 'Online'}
-                             </span>
-                         </div>
-
-                         <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-50">
+                         <div className="pt-4 border-t border-gray-50">
                              <div>
                                 <p className="text-[11px] font-medium text-gray-400 mb-1">Time</p>
                                 <p className="text-sm font-bold text-gray-950">{trip.time || '--:--'}</p>
-                             </div>
-                             <div className="text-center">
-                                <p className="text-[11px] font-medium text-gray-400 mb-1">COD</p>
-                                <p className="text-sm font-bold text-gray-950">₹{collection.toFixed(2)}</p>
-                             </div>
-                             <div className="text-right">
-                                <p className="text-[11px] font-medium text-gray-400 mb-1">Earning</p>
-                                <p className="text-sm font-bold text-gray-950">₹{payout.toFixed(2)}</p>
                              </div>
                          </div>
                       </div>

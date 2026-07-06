@@ -30,8 +30,8 @@ export const PickupActionModal = ({
   if (!order) return null;
 
   const isAtPickup = status === 'REACHED_PICKUP';
-  const restaurantName = order.restaurantName || order.restaurant_name || 'Restaurant';
-  const restaurantAddress = order.restaurantAddress || order.restaurant_address || order.restaurantLocation?.address || 'Address not available';
+  const restaurantName = order.restaurantName || order.restaurant_name || order.restaurantId?.restaurantName || order.restaurantId?.name || 'Restaurant';
+  const restaurantAddress = order.restaurantAddress || order.restaurant_address || order.restaurantId?.address || order.restaurantId?.location?.address || 'Address not available';
   const restaurantPhone = order.restaurantPhone || order.restaurant_phone || order.restaurantId?.phone || '';
   const items = order.items || [];
   const restaurantLogo = order.restaurantImage || order.restaurant?.logo || order.restaurant?.profileImage || 'https://cdn-icons-png.flaticon.com/512/3170/3170733.png';
@@ -120,58 +120,16 @@ export const PickupActionModal = ({
             <div className="space-y-4">
               <div>
                 <p className="text-center text-[10px] font-bold uppercase tracking-widest mb-3 text-green-600">
-                  {otpRequested ? "Enter OTP & Swipe to pick up" : "Request OTP from restaurant"}
+                  Ready for pickup
                 </p>
-
-                {/* Step 1: Request OTP button — sends OTP to restaurant via socket */}
-                <button
-                  onClick={async () => {
-                    const orderId = order._id || order.orderId || order.orderMongoId;
-                    if (!orderId) { toast.error('Order ID missing'); return; }
-                    setIsRequestingOtp(true);
-                    try {
-                      const { deliveryAPI } = await import('@food/api');
-                      await deliveryAPI.requestPickupOtp(orderId);
-                      setOtpRequested(true);
-                      toast.success('OTP sent to restaurant! Ask them for the code.');
-                    } catch (err) {
-                      toast.error(err?.response?.data?.error || 'Failed to send OTP to restaurant');
-                    } finally {
-                      setIsRequestingOtp(false);
-                    }
-                  }}
-                  disabled={isRequestingOtp}
-                  className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white font-black text-sm uppercase tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-60 mb-3 ${otpRequested ? 'bg-orange-400' : 'bg-orange-500'}`}
-                >
-                  {isRequestingOtp ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /><span>Sending...</span></>
-                  ) : (
-                    <span>{otpRequested ? '🔔 Resend OTP' : '🔔 Request OTP'} (Order #{order.orderId || order._id})</span>
-                  )}
-                </button>
-
-                {/* Step 2: OTP input + Slider — visible only after OTP requested */}
-                {otpRequested && (
-                  <>
-                    <div className="mb-4 px-2">
-                      <input
-                        type="number"
-                        placeholder="Enter 4-digit Pickup OTP"
-                        value={pickupOtp}
-                        onChange={e => setPickupOtp(e.target.value.slice(0, 4))}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center text-lg font-black tracking-[0.25em] outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
-                      />
-                    </div>
-                    <ActionSlider
-                      key="action-pickup"
-                      label="Slide to Pick Up"
-                      successLabel="Picked Up!"
-                      disabled={pickupOtp.length !== 4}
-                      onConfirm={() => onPickedUp(null, pickupOtp)}
-                      color="bg-orange-500"
-                    />
-                  </>
-                )}
+                <ActionSlider
+                  key="action-pickup"
+                  label="Slide to Pick Up"
+                  successLabel="Picked Up!"
+                  disabled={false}
+                  onConfirm={() => onPickedUp(null, "bypass")}
+                  color="bg-orange-500"
+                />
               </div>
             </div>
           )}

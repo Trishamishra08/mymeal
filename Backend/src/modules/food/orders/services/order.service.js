@@ -691,46 +691,9 @@ export async function recoverStuckOrders() {
       logger.info(`Watchdog: Auto-cancelled ${staleUnpaidResult.modifiedCount} stale unpaid Razorpay orders.`);
     }
 
-    // 4. Mark orders dead if not delivered within 1 hour
-    const ONE_HOUR = 60 * 60 * 1000;
-    const expiryThreshold = new Date(now - ONE_HOUR);
-    const deadOrders = await FoodOrder.find({
-      createdAt: { $lt: expiryThreshold },
-      orderStatus: { $nin: ['delivered', 'cancelled_by_user', 'cancelled_by_restaurant', 'cancelled_by_admin', 'dead'] },
-      $or: [
-        { 'dispatch.lastRequestedAt': { $exists: false } },
-        { 'dispatch.lastRequestedAt': { $lt: expiryThreshold } }
-      ]
-    });
-
-    let deadCount = 0;
-    if (deadOrders.length > 0) {
-      const io = getIO();
-      for (const order of deadOrders) {
-        order.orderStatus = 'dead';
-        if (order.dispatch) order.dispatch.status = 'cancelled';
-        
-        pushStatusHistory(order, {
-          at: now,
-          byRole: 'SYSTEM',
-          from: 'system_auto',
-          to: 'dead',
-          note: 'Auto-killed: order was not delivered within 1 hour'
-        });
-        await order.save();
-        deadCount++;
-
-        // Notify delivery partner to prompt for a reason
-        if (order.dispatch?.deliveryPartnerId && io) {
-          io.to(rooms.delivery(order.dispatch.deliveryPartnerId)).emit('order_auto_killed', {
-            orderId: order.order_id || order._id.toString(),
-            orderMongoId: order._id.toString(),
-            message: 'Order exceeded 1 hour and was auto-cancelled. Please specify a reason.'
-          });
-        }
-      }
-      logger.info(`Watchdog: Auto-killed ${deadCount} orders that exceeded 1 hour limit.`);
-    }
+    // 4. Mark orders dead if not delivered within 1 hour (DISABLED AS PER REQUEST)
+    // const ONE_HOUR = 60 * 60 * 1000;
+    // ... logic removed ...
 
   } catch (err) {
     logger.error(`Watchdog recovery error: ${err.message}`);
@@ -1008,7 +971,7 @@ export async function cancelOrder(orderId, userId, reason, refundDestination = "
         message: `Order #${order.order_id || order._id} has been cancelled by the customer. Reason: ${reason || "No reason provided"}.${refundDetail}`
       };
       io.to(rooms.user(userId)).emit("order_status_update", payload);
-      io.to(rooms.restaurant(order.restaurantId)).emit("order_status_update", payload);
+      if (order.restaurantId) io.to(rooms.restaurant(order.restaurantId)).emit("order_status_update", payload);
       
       const assignedRiderId = order.dispatch?.deliveryPartnerId;
       if (assignedRiderId) {
@@ -1148,6 +1111,31 @@ export async function listOrdersRestaurant(restaurantId, query) {
   }), total, page, limit });
 }
 
+export async function updateOrderStatusAdmin(
+  orderId,
+  adminId,
+  orderStatus,
+  note = ""
+) {
+  const identity = buildOrderIdentityFilter(orderId);
+  let order = await FoodOrder.findOne(identity);
+  if (!order) throw new NotFoundError("Order not found");
+  
+  const from = order.orderStatus;
+  // If moving forwards or cancelling, we allow it for admin. 
+  // No strict 'advance' check needed for admin, they have override powers, but we'll still check for basic flow sanity if we want.
+  order.orderStatus = orderStatus;
+  pushStatusHistory(order, {
+    byRole: "ADMIN",
+    byId: adminId,
+    from,
+    to: orderStatus,
+    note: note || ""
+  });
+  await order.save();
+  return _triggerStatusUpdateSideEffects(order, from, orderStatus, adminId);
+}
+
 export async function updateOrderStatusRestaurant(
   orderId,
   restaurantId,
@@ -1160,6 +1148,7 @@ export async function updateOrderStatusRestaurant(
     restaurantId: new mongoose.Types.ObjectId(restaurantId),
   });
   if (!order) throw new NotFoundError("Order not found");
+  
   const from = order.orderStatus;
   if (!isStatusAdvance(from, orderStatus)) {
       throw new ValidationError(`Current order status '${from}' is further ahead than '${orderStatus}'. Order cannot be moved backwards.`);
@@ -1173,6 +1162,11 @@ export async function updateOrderStatusRestaurant(
     note: note || ""
   });
   await order.save();
+  return _triggerStatusUpdateSideEffects(order, from, orderStatus, restaurantId);
+}
+
+async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId) {
+  const restaurantId = order.restaurantId;
 
   // Custom messages / titles for status updates
   let title = `Order ${order._id.toString()} updated`;
@@ -1458,6 +1452,10 @@ export async function getCurrentTripDelivery(deliveryPartnerId) {
   return deliveryService.getCurrentTripDelivery(deliveryPartnerId);
 }
 
+export async function getActiveTripsDelivery(deliveryPartnerId) {
+  return deliveryService.getActiveTripsDelivery(deliveryPartnerId);
+}
+
 // ----- Delivery: available, accept, reject, status -----
 export async function listOrdersAvailableDelivery(deliveryPartnerId, query) {
   return deliveryService.listOrdersAvailableDelivery(deliveryPartnerId, query);
@@ -1688,61 +1686,53 @@ export async function assignDeliveryPartnerAdmin(
   }
 
   const now = new Date();
-  order.dispatch.status = 'accepted';
+  order.dispatch.status = 'assigned';
+  order.dispatch.modeAtCreation = 'manual'; // Prevent SmartDispatch fallback
   order.dispatch.deliveryPartnerId = new mongoose.Types.ObjectId(deliveryPartnerId);
   order.dispatch.assignedAt = now;
-  order.dispatch.acceptedAt = now;
+  order.dispatch.acceptedAt = undefined;
   
-  pushStatusHistory(order, { byRole: 'ADMIN', byId: adminId, from: 'assigned', to: 'accepted', note: 'Manually assigned by admin' });
+  if (!Array.isArray(order.dispatch.offeredTo)) {
+      order.dispatch.offeredTo = [];
+  }
+  
+  order.dispatch.offeredTo.push({
+      partnerId: deliveryPartnerId,
+      offeredAt: now,
+      action: 'offered'
+  });
+  
+  pushStatusHistory(order, { byRole: 'ADMIN', byId: adminId, from: 'unassigned', to: 'assigned', note: 'Manually requested by admin' });
   await order.save();
 
-  // Call the same post-acceptance logic
-  try {
-      // Firebase update
-      const restLoc = order.restaurantId ? (await FoodRestaurant.findById(order.restaurantId).select('location').lean())?.location?.coordinates : null;
-      const userLoc = order.deliveryAddress?.location?.coordinates;
-      if (restLoc?.[0] && userLoc?.[0]) {
-          const { fetchPolyline } = await import('../utils/googleMaps.js');
-          const polyline = await fetchPolyline({ lat: restLoc[1], lng: restLoc[0] }, { lat: userLoc[1], lng: userLoc[0] });
-          const { getFirebaseDB } = await import('../../../../config/firebase.js');
-          const db = getFirebaseDB();
-          if (db) {
-             await db.ref(`active_orders/${order._id.toString()}`).set({
-                polyline, lat: restLoc[1], lng: restLoc[0],
-                boy_lat: restLoc[1], boy_lng: restLoc[0],
-                restaurant_lat: restLoc[1], restaurant_lng: restLoc[0],
-                customer_lat: userLoc[1], customer_lng: userLoc[0],
-                status: 'accepted', last_updated: Date.now(),
-             });
-          }
-      }
+  const populatedOrder = await FoodOrder.findById(order._id).populate('restaurantId userId');
+  
+  // Fallback to primary restaurant if the order has no specific restaurant attached (Central Kitchen Model)
+  let restaurantForPayload = populatedOrder?.restaurantId;
+  if (!restaurantForPayload) {
+      restaurantForPayload = await FoodRestaurant.findOne({}).lean();
+  }
 
+  try {
       const { getIO, rooms } = await import('../../../../config/socket.js');
       const io = getIO();
       if (io) {
-          const payload = { orderMongoId: order._id.toString(), orderId: order._id.toString(), orderStatus: order.orderStatus, dispatchStatus: order.dispatch?.status };
-          io.to(rooms.delivery(deliveryPartnerId)).emit('order_status_update', payload);
-          io.to(rooms.restaurant(order.restaurantId)).emit('order_status_update', payload);
-          io.to(rooms.user(order.userId)).emit('order_status_update', payload);
-          io.to('all_delivery').emit('order_claimed', { orderId: order._id.toString(), claimedBy: deliveryPartnerId });
+          const payload = populatedOrder ? buildDeliverySocketPayload(populatedOrder, restaurantForPayload) : { 
+             orderMongoId: order._id.toString(), orderId: order._id.toString(), 
+             orderStatus: order.orderStatus, dispatchStatus: order.dispatch?.status 
+          };
+          io.to(rooms.delivery(deliveryPartnerId)).emit('new_order_assigned', payload);
       }
-
+      
       // FCM Notify Partner
+      const { notifyOwnerSafely } = await import('../utils/notifications.js');
       await notifyOwnerSafely(
           { ownerType: 'DELIVERY_PARTNER', ownerId: deliveryPartnerId },
-          { title: 'New Order Assigned! 🚀', body: `Admin manually assigned order #${order._id.toString()} to you.`, data: { type: 'delivery_accepted', orderId: order._id.toString() } }
+          { title: 'New Delivery Request! 🚀', body: `Admin requested you for order #${order.order_id || order._id.toString()}.`, data: { type: 'new_order', orderId: order._id.toString() } }
       );
   } catch(e) {
-      console.error("Post manual assignment logic failed", e);
+      console.error("Post manual assignment request logic failed", e);
   }
-
-  enqueueOrderEvent('delivery_accepted', {
-      orderMongoId: order._id?.toString?.(),
-      orderId: order._id.toString(),
-      deliveryPartnerId,
-      dispatchStatus: order.dispatch?.status,
-      orderStatus: order.orderStatus,
-  });
 
   return normalizeOrderForClient(order);
 }

@@ -1,4 +1,5 @@
 import { FoodBusinessSettings } from '../models/businessSettings.model.js';
+import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
 import { sendResponse } from '../../../../utils/response.js';
 import { uploadImageBufferDetailed, uploadFileBufferDetailed } from '../../../../services/cloudinary.service.js';
 
@@ -35,7 +36,8 @@ export async function updateBusinessSettings(req, res, next) {
         const { 
             companyName, email, phoneCountryCode, phoneNumber, address, state, pincode, region,
             supportEmail, supportPhone, supportHours, fssai, gstin, onlinePaymentOnly, maxCodAmount,
-            maintenanceMode, customerRegistration, restaurantRegistration, deliveryRegistration
+            maintenanceMode, customerRegistration, restaurantRegistration, deliveryRegistration,
+            lat, lng
         } = data;
 
         // Ensure string inputs for validation to prevent crashes from non-string values
@@ -91,6 +93,17 @@ export async function updateBusinessSettings(req, res, next) {
         if (state !== undefined) settings.state = s_state;
         if (pincode !== undefined) settings.pincode = s_pincode;
         if (region) settings.region = String(region).trim();
+        
+        if (lat !== undefined && lng !== undefined) {
+            const latitude = parseFloat(lat);
+            const longitude = parseFloat(lng);
+            if (!isNaN(latitude) && !isNaN(longitude)) {
+                settings.location = {
+                    type: 'Point',
+                    coordinates: [longitude, latitude]
+                };
+            }
+        }
         
         if (supportEmail !== undefined) settings.supportEmail = s_supportEmail;
         if (supportPhone !== undefined) settings.supportPhone = s_supportPhone;
@@ -149,6 +162,38 @@ export async function updateBusinessSettings(req, res, next) {
         }
 
         await settings.save();
+        
+        // Synchronize this location and name with the primary FoodRestaurant (Central Kitchen)
+        try {
+            const primaryRestaurant = await FoodRestaurant.findOne({});
+            if (primaryRestaurant) {
+                if (s_companyName) primaryRestaurant.restaurantName = s_companyName;
+                
+                // Ensure location object exists before modifying
+                if (!primaryRestaurant.location) {
+                    primaryRestaurant.location = { type: 'Point', coordinates: [75.8577, 22.7196] };
+                }
+                
+                if (s_address) {
+                    primaryRestaurant.location.address = s_address;
+                    primaryRestaurant.location.formattedAddress = s_address;
+                    primaryRestaurant.location.addressLine1 = s_address;
+                }
+                
+                if (settings.location && settings.location.coordinates) {
+                    primaryRestaurant.location.coordinates = [settings.location.coordinates[0], settings.location.coordinates[1]];
+                    primaryRestaurant.location.longitude = settings.location.coordinates[0];
+                    primaryRestaurant.location.latitude = settings.location.coordinates[1];
+                }
+                
+                // Force mongoose to recognize the nested update
+                primaryRestaurant.markModified('location');
+                await primaryRestaurant.save();
+            }
+        } catch (syncError) {
+            console.error("Error syncing business settings to FoodRestaurant:", syncError);
+        }
+
         return sendResponse(res, 200, 'Business settings updated successfully', settings);
     } catch (error) {
         next(error);

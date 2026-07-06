@@ -153,9 +153,9 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order, onAssignD
                     Delivered At
                   </p>
                   <p className="text-sm font-medium text-slate-900">
-                    {new Date(order.deliveredAt).toLocaleString('en-GB', { 
-                      day: '2-digit', 
-                      month: 'short', 
+                    {new Date(order.deliveredAt).toLocaleString('en-GB', {
+                      day: '2-digit',
+                      month: 'short',
                       year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit'
@@ -175,17 +175,17 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order, onAssignD
                   {order.cancellationReason && (
                     <p className="text-xs text-red-600 mt-1">
                       <span className="font-medium">
-                        {order.cancelledBy === 'user' ? 'Cancelled by User - ' : 
-                         order.cancelledBy === 'restaurant' ? 'Cancelled by Restaurant - ' : 
+                        {order.cancelledBy === 'user' ? 'Cancelled by User - ' :
+                         order.cancelledBy === 'restaurant' ? 'Cancelled by Restaurant - ' :
                          'Cancellation '}Reason:
                       </span> {order.cancellationReason}
                     </p>
                   )}
                   {order.cancelledAt && (
                     <p className="text-xs text-slate-500 mt-1">
-                      Cancelled: {new Date(order.cancelledAt).toLocaleString('en-GB', { 
-                        day: '2-digit', 
-                        month: 'short', 
+                      Cancelled: {new Date(order.cancelledAt).toLocaleString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
                         year: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit'
@@ -275,6 +275,57 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order, onAssignD
             </div>
           )}
 
+          {/* MyMeal Tiffin Details */}
+          {order.tiffinOrder && (
+            <div className="border-t border-slate-200 pt-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                MyMeal Tiffin Details
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Quantity</p>
+                  <p className="text-sm font-bold text-slate-900">{order.tiffinOrder.quantity || 1}</p>
+                </div>
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Unit Price</p>
+                  <p className="text-sm font-bold text-slate-900">₹{Number(order.tiffinOrder.unitPrice || 0).toFixed(2)}</p>
+                </div>
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Menu Date</p>
+                  <p className="text-sm font-bold text-slate-900">{order.tiffinOrder.menuDate || "Today"}</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {(order.tiffinOrder.tiffins || []).map((tiffin, index) => (
+                  <div key={index} className="rounded-lg border border-slate-200 bg-white p-3">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <p className="text-sm font-bold text-slate-900">Tiffin {tiffin.index || index + 1}</p>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tiffin.customized ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}`}>
+                        {tiffin.customized ? "Customized" : "Default"}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {(tiffin.items || []).map((item, itemIndex) => (
+                        <div key={itemIndex} className="flex items-start justify-between gap-3 rounded-md bg-slate-50 p-2">
+                          <div>
+                            <p className="text-xs font-bold text-slate-700">{item.categoryName}</p>
+                            <p className="text-sm font-semibold text-slate-900">{item.selectedItemName}</p>
+                            {item.customized && (
+                              <p className="text-xs text-orange-700">Default: {item.defaultItemName}</p>
+                            )}
+                          </div>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${item.customized ? "bg-orange-50 text-orange-700" : "bg-emerald-50 text-emerald-700"}`}>
+                            {item.customized ? "Changed" : "Default"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Order Items */}
           {order.items && Array.isArray(order.items) && order.items.length > 0 && (
             <div className="border-t border-slate-200 pt-4">
@@ -402,7 +453,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order, onAssignD
                 </button>
               )}
             </div>
-            
+
             {(order.deliveryPartnerName || order.deliveryPartnerPhone) ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {order.deliveryPartnerName && (
@@ -456,8 +507,8 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order, onAssignD
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Platform Fee</span>
                 <span className="font-medium text-slate-900">
-                  {order.platformFee !== undefined && order.platformFee > 0 
-                    ? `₹${order.platformFee.toFixed(2)}` 
+                  {order.platformFee !== undefined && order.platformFee > 0
+                    ? `₹${order.platformFee.toFixed(2)}`
                     : <span className="text-slate-400">₹0.00</span>}
                 </span>
               </div>
@@ -482,5 +533,3 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order, onAssignD
     </Dialog>
   )
 }
-
-

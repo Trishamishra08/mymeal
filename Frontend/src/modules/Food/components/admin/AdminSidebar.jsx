@@ -47,6 +47,8 @@ import {
   IndianRupee,
   PiggyBank,
   Lock,
+  ClipboardList,
+  Activity,
 } from "lucide-react"
 import { cn } from "@food/utils/utils"
 import { Input } from "@food/components/ui/input"
@@ -101,6 +103,8 @@ const iconMap = {
   IndianRupee,
   PiggyBank,
   Lock,
+  ClipboardList,
+  Activity,
   X,
 }
 
@@ -261,7 +265,8 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
       if (item.type === "section") {
         item.items.forEach((subItem) => {
           if (subItem.type === "expandable") {
-            state[subItem.label.toLowerCase().replace(/\s+/g, "")] = false
+            const key = subItem.label.toLowerCase().replace(/\s+/g, "")
+            state[key] = key === "menumanagement"
           }
         })
       }
@@ -269,6 +274,26 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
     return state
   })
 
+  useEffect(() => {
+    setExpandedSections((prev) => {
+      const next = { ...prev }
+      let changed = false
+      adminSidebarMenu.forEach((item) => {
+        if (item.type === "section") {
+          item.items.forEach((subItem) => {
+            if (subItem.type === "expandable") {
+              const key = subItem.label.toLowerCase().replace(/\s+/g, "")
+              if (next[key] === undefined) {
+                next[key] = key === "menumanagement"
+                changed = true
+              }
+            }
+          })
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [])
   // Save states to consolidated localStorage and notify parent
   useEffect(() => {
     try {
@@ -819,5 +844,6 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
     </>
   )
 }
+
 
 

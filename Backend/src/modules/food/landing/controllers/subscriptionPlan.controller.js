@@ -26,9 +26,12 @@ const toItem = (plan) => {
     };
 };
 
-export const listSubscriptionPlansAdminController = async (_req, res, next) => {
+export const listSubscriptionPlansAdminController = async (req, res, next) => {
     try {
-        const plans = await listSubscriptionPlans();
+        const plans = await listSubscriptionPlans({
+            search: req.query?.search,
+            status: req.query?.status,
+        });
         return sendResponse(res, 200, 'Subscription plans fetched successfully', { plans: plans.map(toItem) });
     } catch (error) {
         next(error);
@@ -96,3 +99,4 @@ export const updateSubscriptionPlanOrderController = async (req, res, next) => {
         next(error);
     }
 };
+

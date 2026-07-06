@@ -12,6 +12,10 @@ const businessSettingsSchema = new mongoose.Schema(
         state: { type: String, default: '' },
         pincode: { type: String, default: '' },
         region: { type: String, default: 'India' },
+        location: {
+            type: { type: String, enum: ['Point'], default: 'Point' },
+            coordinates: { type: [Number], default: [75.8577, 22.7196] } // [longitude, latitude]
+        },
         fssai: { type: String, default: '' },
         gstin: { type: String, default: '' },
         logo: {

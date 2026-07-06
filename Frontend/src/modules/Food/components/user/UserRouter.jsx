@@ -32,6 +32,7 @@ const ProductDetail = lazy(() => import("@food/pages/user/ProductDetail"))
 const ChooseMeal = lazy(() => import("@food/pages/user/ChooseMeal"))
 const SubscriptionPlans = lazy(() => import("@food/pages/user/SubscriptionPlans"))
 const SubscriptionCheckout = lazy(() => import("@food/pages/user/SubscriptionCheckout"))
+const OneTimeTiffinOrder = lazy(() => import("@food/pages/user/OneTimeTiffinOrder"))
 
 // Cart
 const Cart = lazy(() => import("@food/pages/user/cart/Cart"))
@@ -81,6 +82,7 @@ const MySubscriptions = lazy(() => import("@food/pages/user/profile/MySubscripti
 const SubscriptionDetails = lazy(() => import("@food/pages/user/profile/SubscriptionDetails"))
 const ChangeSubscriptionDish = lazy(() => import("@food/pages/user/profile/ChangeSubscriptionDish"))
 const ChangeSubscriptionDishCheckout = lazy(() => import("@food/pages/user/profile/ChangeSubscriptionDishCheckout"))
+const Transactions = lazy(() => import("@food/pages/user/profile/Transactions"))
 
 // Auth
 const SignIn = lazy(() => import("@food/pages/user/auth/SignIn"))
@@ -161,6 +163,7 @@ export default function UserRouter() {
           <Route path="product/:id" element={<ProductDetail />} />
           <Route path="choose-meal" element={<ChooseMeal />} />
           <Route path="subscription-plans" element={<SubscriptionPlans />} />
+          <Route path="one-time-tiffin" element={<OneTimeTiffinOrder />} />
           <Route path="subscriptions/checkout" element={<SubscriptionCheckout />} />
           <Route path="checkout" element={<SubscriptionCheckout />} />
 
@@ -360,6 +363,14 @@ export default function UserRouter() {
             element={
               <ProtectedRoute requiredRole="user" loginPath="/user/auth/login">
                 {diningElement(<MyBookings />)}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="profile/transactions"
+            element={
+              <ProtectedRoute requiredRole="user" loginPath="/user/auth/login">
+                <Transactions />
               </ProtectedRoute>
             }
           />

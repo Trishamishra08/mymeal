@@ -174,6 +174,10 @@ import RestaurantsSection from "@food/components/user/home/RestaurantsSection";
 import AllCategoriesModal from "@food/components/user/home/AllCategoriesModal";
 import ManageCollectionsModal from "@food/components/user/home/ManageCollectionsModal";
 import VegModeOverlay from "@food/components/user/home/VegModeOverlay";
+import ChooseYourOption from "@food/components/user/home/ChooseYourOption";
+import TodayDefaultTiffin from "@food/components/user/home/TodayDefaultTiffin";
+import WhyChooseMyMeal from "@food/components/user/home/WhyChooseMyMeal";
+
 
 export default function Home() {
   const HERO_BANNER_AUTO_SLIDE_MS = 3500;
@@ -2119,7 +2123,7 @@ export default function Home() {
           `}</style>
         </div>
 
-        <div className="md:hidden relative overflow-x-clip bg-[#fff9f2] min-h-screen pb-24">
+        <div className="md:hidden relative overflow-x-clip bg-white pb-16">
           <MobileHeader 
   effectiveLocation={effectiveLocation} 
   handleLocationClick={handleLocationClick} 
@@ -2131,28 +2135,10 @@ export default function Home() {
 
           {renderHeroBannerSection(true)}
 
-          <main className="px-5">
+          <ChooseYourOption />
+          <TodayDefaultTiffin />
+          <WhyChooseMyMeal />
 
-            <HomeCategories 
-  loadingRealCategories={loadingRealCategories} 
-  homeCategoryTiles={homeCategoryTiles} 
-  selectedHomeCategory={selectedHomeCategory} 
-  setSelectedHomeCategory={setSelectedHomeCategory} 
-/>
-
-            <RecommendedItems 
-  selectedHomeCategory={selectedHomeCategory} 
-  setSelectedHomeCategory={setSelectedHomeCategory} 
-  showRestaurantSkeleton={showRestaurantSkeleton} 
-  loadingRestaurants={loadingRestaurants} 
-  loadingCategoryFoodItems={loadingCategoryFoodItems} 
-  loadingRecommendedFoodItems={loadingRecommendedFoodItems} 
-  categoryFoodItems={categoryFoodItems} 
-  recommendedFoodItems={recommendedFoodItems} 
-  handleAddHomeItemToCart={handleAddHomeItemToCart} 
-  cart={cart} 
-/>
-          </main>
         </div>
 
         <div className="hidden md:block relative overflow-x-clip bg-white dark:bg-[#0a0a0a]">
@@ -2205,8 +2191,7 @@ export default function Home() {
                 className="bg-transparent dark:bg-transparent"
               >
 
-                {/* "What's on your mind today?" Section - Now with Sticky Logic */}
-                <MindCategories displayCategories={displayCategories} />
+
 
                 {/* Dynamic Sticky Header (Search + Slider + Filters) */}
                 <StickyHeader 
@@ -2222,6 +2207,10 @@ export default function Home() {
 
                 {/* Admin Hero Banners Section - Now below categories */}
                 {renderHeroBannerSection(false)}
+
+                <ChooseYourOption />
+                <TodayDefaultTiffin />
+                <WhyChooseMyMeal />
 
                 {/* Filters Sticky Sidebar Header */}
                 <FilterBar 
@@ -2249,7 +2238,7 @@ export default function Home() {
           </AnimatePresence>
         </div>
 
-        <RecommendedRestaurants recommendedForYouRestaurants={recommendedForYouRestaurants} />
+
 
         {/* Explore More Section */}
         <ExploreMoreSection 

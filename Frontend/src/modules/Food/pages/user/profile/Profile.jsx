@@ -692,6 +692,33 @@ export default function Profile() {
             </Card>
           </motion.div>
 
+          <Link to="/user/profile/transactions" className="block">
+            <motion.div
+              whileHover={{ x: 4, scale: 1.01 }}
+              transition={{ duration: 0.2, type: "spring", stiffness: 300 }}>
+              <Card className="bg-white dark:bg-[#1a1a1a] py-0 rounded-xl shadow-sm border-0 dark:border-gray-800 cursor-pointer">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      className="bg-gray-100 dark:bg-gray-800 rounded-full p-2"
+                      whileHover={{ rotate: 15, scale: 1.1 }}
+                      transition={{ duration: 0.3 }}>
+                      <Wallet className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                    </motion.div>
+                    <span className="text-base font-medium text-gray-900 dark:text-white">
+                      Transactions
+                    </span>
+                  </div>
+                  <motion.div
+                    whileHover={{ x: 4 }}
+                    transition={{ duration: 0.2 }}>
+                    <ChevronRight className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                  </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Link>
+
           <Link to="/user/profile/edit" className="block">
             <motion.div
               whileHover={{ x: 4, scale: 1.01 }}
@@ -765,33 +792,7 @@ export default function Profile() {
             </Card>
           </motion.div>
 
-          <motion.div
-            whileHover={{ x: 4, scale: 1.01 }}
-            transition={{ duration: 0.2, type: "spring", stiffness: 300 }}>
-            <Card
-              className="bg-white dark:bg-[#1a1a1a] py-0 rounded-xl shadow-sm border-0 dark:border-gray-800 cursor-pointer"
-              onClick={() => setFoodPreferenceOpen(true)}>
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <motion.div
-                    className="bg-gray-100 dark:bg-gray-800 rounded-full p-2"
-                    whileHover={{ rotate: 15, scale: 1.1 }}
-                    transition={{ duration: 0.3 }}>
-                    <Utensils className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                  </motion.div>
-                  <span className="text-base font-medium text-gray-900 dark:text-white">
-                    Food Preference
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-medium text-gray-900 dark:text-white">
-                    {foodPreference === "healthy" ? "Healthy" : "All Items"}
-                  </span>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+
           <motion.div
             whileHover={{ x: 4, scale: 1.01 }}
             transition={{ duration: 0.2, type: "spring", stiffness: 300 }}>
@@ -1191,79 +1192,7 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
 
-      {/* Food Preference Popup */}
-      <Dialog open={foodPreferenceOpen} onOpenChange={setFoodPreferenceOpen}>
-        <DialogContent className="max-w-sm md:max-w-md lg:max-w-lg w-[calc(100%-2rem)] rounded-2xl p-0 overflow-hidden bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-gray-800">
-          <DialogHeader className="p-5 pb-3">
-            <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
-              Food Preference
-            </DialogTitle>
-            <DialogDescription className="text-sm text-gray-500 dark:text-gray-400">
-              Choose what you want to see first on the Home page
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 px-5 pb-5">
-            <button
-              onClick={() => {
-                handleFoodPreferenceUpdate("healthy");
-                setFoodPreferenceOpen(false);
-              }}
-              className={`w-full p-3 rounded-xl border-2 transition-all flex items-center justify-between ${foodPreference === "healthy"
-                  ? "border-green-600 bg-green-50 dark:bg-green-950/20"
-                  : "border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1a1a] hover:border-gray-300"
-                }`}>
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${foodPreference === "healthy"
-                      ? "border-green-600 bg-green-600"
-                      : "border-gray-300"
-                    }`}>
-                  {foodPreference === "healthy" && <Check className="h-3 w-3 text-white" />}
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-gray-900 dark:text-white text-sm">
-                    Healthy Food
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Show categories marked as healthy first
-                  </p>
-                </div>
-              </div>
-              <Leaf
-                className={`h-5 w-5 ${foodPreference === "healthy" ? "text-green-600" : "text-gray-400"}`}
-              />
-            </button>
-            <button
-              onClick={() => {
-                handleFoodPreferenceUpdate("all");
-                setFoodPreferenceOpen(false);
-              }}
-              className={`w-full p-3 rounded-xl border-2 transition-all flex items-center justify-between ${foodPreference === "all"
-                  ? "border-[#55254b] bg-[#fdfafc] dark:bg-[#3c0f3d]/10"
-                  : "border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1a1a] hover:border-gray-300"
-                }`}>
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${foodPreference === "all" ? "border-[#55254b] bg-[#55254b]" : "border-gray-300"
-                    }`}>
-                  {foodPreference === "all" && <Check className="h-3 w-3 text-white" />}
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-gray-900 dark:text-white text-sm">
-                    All Items
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Show every available category and item
-                  </p>
-                </div>
-              </div>
-              <Utensils
-                className={`h-5 w-5 ${foodPreference === "all" ? "text-[#55254b]" : "text-gray-400"}`}
-              />
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Logout Confirmation Popup */}
       {logoutConfirmOpen && (

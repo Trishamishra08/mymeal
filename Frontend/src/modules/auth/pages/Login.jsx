@@ -41,7 +41,7 @@ export default function UnifiedOTPFastLogin() {
   })
   const navigate = useNavigate()
   const submitting = useRef(false)
-  const goToFoodPreference = () => navigate("/user/auth/portal", { replace: true })
+  const goToFoodPreference = () => navigate("/food/user", { replace: true })
 
   useEffect(() => {
     let cancelled = false

@@ -439,14 +439,19 @@ export default function OrdersTable({
                         </button>
                       )}
                       {/* Assign Delivery Partner Button */}
-                      {(!order.deliveryPartnerName && onAssignDelivery && ['Pending', 'Processing'].includes(order.orderStatus)) && (
-                        <button
-                          onClick={() => onAssignDelivery(order)}
-                          className="p-1.5 rounded text-orange-600 hover:bg-orange-50 transition-colors"
-                          title="Assign Delivery Partner"
-                        >
-                          <Truck className="w-4 h-4" />
-                        </button>
+                      {(!order.deliveryPartnerName && onAssignDelivery && ['Pending', 'Accepted', 'Processing'].includes(order.orderStatus)) && (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <button
+                            onClick={() => onAssignDelivery(order)}
+                            className={`p-1.5 rounded transition-colors ${order.dispatch?.offeredTo?.slice(-1)[0]?.action === 'rejected' ? 'text-red-600 hover:bg-red-50 bg-red-50/50' : 'text-orange-600 hover:bg-orange-50'}`}
+                            title={order.dispatch?.offeredTo?.slice(-1)[0]?.action === 'rejected' ? "Rider Rejected. Click to re-assign." : "Assign Delivery Partner"}
+                          >
+                            <Truck className="w-4 h-4" />
+                          </button>
+                          {order.dispatch?.offeredTo?.slice(-1)[0]?.action === 'rejected' && (
+                            <span className="text-[9px] font-bold text-red-600 uppercase tracking-tighter leading-none text-center">Rejected</span>
+                          )}
+                        </div>
                       )}
                       <button 
                         onClick={() => onViewOrder(order)}

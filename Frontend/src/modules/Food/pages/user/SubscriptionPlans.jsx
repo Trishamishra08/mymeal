@@ -74,6 +74,7 @@ export default function SubscriptionPlans() {
         const mapped = apiPlans
           .filter((plan) => plan?.title && plan?.durationDays)
           .map((plan, index) => ({
+            ...plan,
             id: plan._id || plan.id || `plan-${index}`,
             title: plan.title,
             durationDays: plan.durationDays,
@@ -126,35 +127,6 @@ export default function SubscriptionPlans() {
           </button>
         </header>
 
-        <section className="mt-4 overflow-hidden rounded-[16px] bg-[#fff6f0] px-4 py-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#e3282c]">
-                Your Selection
-              </p>
-              <p className="mt-2 text-sm font-bold text-gray-900">
-                You have selected {selectedMealCount} meal{selectedMealCount === 1 ? "" : "s"}.
-              </p>
-              <p className="mt-0.5 text-xs font-medium text-gray-600">
-                Price will be calculated based on this selection.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                navigate({
-                  pathname: "/food/user/choose-meal",
-                  search: `?dish=${encodeURIComponent(dish.name || "")}&dishId=${encodeURIComponent(dish.itemId || dish.id || "")}&restaurant=${encodeURIComponent(dish.restaurantName || "")}&restaurantId=${encodeURIComponent(dish.restaurantId || "")}&category=${encodeURIComponent(dish.categoryName || "")}${dish.price ? `&price=${encodeURIComponent(dish.price)}` : ""}`,
-                }, { state: { dish } })
-              }
-              className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#e3282c] mt-1"
-            >
-              <Edit3 className="h-3.5 w-3.5" />
-              Edit Meals
-            </button>
-          </div>
-        </section>
-
         <main className="mt-5 space-y-4">
           {loading && plans.length === 0 ? (
             <div className="rounded-[16px] border border-red-100 p-8 text-center text-sm font-medium text-gray-400">
@@ -189,33 +161,68 @@ export default function SubscriptionPlans() {
                   )}
                 </div>
 
+                {/* Plan Details Grid */}
+                <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                  {plan.planType && (
+                    <div className="flex flex-col rounded-md bg-gray-50 p-2 border border-gray-100">
+                      <span className="text-[10px] text-gray-500 font-medium">Plan Type</span>
+                      <span className="font-semibold text-gray-800">{plan.planType}</span>
+                    </div>
+                  )}
+                  {plan.mealType && (
+                    <div className="flex flex-col rounded-md bg-gray-50 p-2 border border-gray-100">
+                      <span className="text-[10px] text-gray-500 font-medium">Meal Type</span>
+                      <span className="font-semibold text-gray-800">{plan.mealType}</span>
+                    </div>
+                  )}
+                  {plan.dailyTiffinQuantity > 0 && (
+                    <div className="flex flex-col rounded-md bg-gray-50 p-2 border border-gray-100">
+                      <span className="text-[10px] text-gray-500 font-medium">Tiffin Qty/Day</span>
+                      <span className="font-semibold text-gray-800">{plan.dailyTiffinQuantity}</span>
+                    </div>
+                  )}
+                  {plan.deliveryTime?.from && plan.deliveryTime?.to && (
+                    <div className="flex flex-col rounded-md bg-gray-50 p-2 border border-gray-100">
+                      <span className="text-[10px] text-gray-500 font-medium">Delivery</span>
+                      <span className="font-semibold text-gray-800">{plan.deliveryTime.from} - {plan.deliveryTime.to}</span>
+                    </div>
+                  )}
+                  {plan.allowMealCustomization && (
+                    <div className="flex flex-col rounded-md bg-gray-50 p-2 border border-gray-100">
+                      <span className="text-[10px] text-gray-500 font-medium">Customization</span>
+                      <span className="font-semibold text-gray-800">Allowed {plan.customizationCutoffTime && `(by ${plan.customizationCutoffTime})`}</span>
+                    </div>
+                  )}
+                  {plan.allowSkipDelivery && (
+                    <div className="flex flex-col rounded-md bg-gray-50 p-2 border border-gray-100">
+                      <span className="text-[10px] text-gray-500 font-medium">Skip Delivery</span>
+                      <span className="font-semibold text-gray-800">Allowed</span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="mt-6 bg-[#fafafa] rounded-[12px] p-3 border border-gray-100">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-[#e3282c]">
                     Pricing
                   </p>
                   <p className="mt-1 text-[15px] font-bold text-gray-900">
-                    {selectedDishPrice > 0
-                      ? `INR ${(selectedDishPrice * selectedMealCount * plan.durationDays).toLocaleString("en-IN")} + GST + delivery`
-                      : "Price is calculated from selected dish and duration"}
+                    {plan.currency} {plan.price ? plan.price.toLocaleString("en-IN") : 0} + GST + delivery
                   </p>
                   <p className="mt-1 text-xs font-medium text-gray-500">
-                    {selectedDishPrice > 0
-                      ? `${plan.durationDays} days x ${selectedMealCount} meal${selectedMealCount === 1 ? "" : "s"} x INR ${selectedDishPrice.toLocaleString("en-IN")}`
-                      : "Select a priced dish to continue"}
+                    {plan.durationDays} days • {plan.mealType || "Meals"}
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  disabled={selectedDishPrice <= 0}
                   onClick={() =>
                     navigate("/food/user/checkout", {
                       state: { dish, selectedMeals, subscriptionPlan: plan },
                     })
                   }
-                  className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#e3282c] text-sm font-bold text-white transition active:bg-[#c42226] disabled:bg-gray-300 disabled:text-gray-500"
+                  className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#e3282c] text-sm font-bold text-white transition active:bg-[#c42226]"
                 >
-                  {selectedDishPrice > 0 ? "Continue" : "Unavailable"}
+                  Continue
                   <ChevronRight className="h-4 w-4" />
                 </button>
 
@@ -247,16 +254,7 @@ export default function SubscriptionPlans() {
           )}
         </main>
 
-        <div className="fixed bottom-24 right-5 z-20 md:right-[calc(50%-13rem)]">
-          <button
-            type="button"
-            onClick={() => navigate("/food/user/help")}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-[#e3282c] text-white shadow-lg"
-            aria-label="Help"
-          >
-            <MessageCircle className="h-6 w-6" />
-          </button>
-        </div>
+
       </div>
     </div>
   );

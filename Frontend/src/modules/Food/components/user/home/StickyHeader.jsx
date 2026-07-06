@@ -24,29 +24,7 @@ export default function StickyHeader({
                       transition={{ duration: 0.3, ease: "easeOut" }}
                       className="fixed top-0 left-0 right-0 z-[100] bg-white/95 dark:bg-[#0a0a0a]/95 backdrop-blur-md shadow-lg border-b border-gray-100 dark:border-white/5 safe-top"
                     >
-                      {/* Search Bar Row (appears when scrolling up) */}
-                      <AnimatePresence>
-                        {showStickySearch && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="px-4 pt-3 pb-2"
-                          >
-                            <div
-                              className="bg-white dark:bg-[#1a1a1a] rounded-2xl flex items-center px-4 py-3 cursor-pointer border-2 border-[#7e3866]/30 dark:border-[#7e3866]/50 shadow-md"
-                              onClick={handleSearchFocus}
-                            >
-                              <Search className="h-5 w-5 text-[#7e3866] dark:text-[#a14b84] mr-3" strokeWidth={2.5} />
-                              <div className="flex-1 relative h-5 overflow-hidden">
-                                <span className="absolute inset-0 text-base text-gray-400 font-medium">Search "biryani"</span>
-                              </div>
-                              <div className="h-5 w-[1px] bg-gray-200 dark:bg-white/10 mx-2" />
-                              <Mic className="h-5 w-5 text-[#7e3866] dark:text-[#a14b84]" />
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+
 
                       {/* Categories Slider (Increased Icon Size) */}
                       <div className="flex overflow-x-auto gap-5 py-3 pb-2 scrollbar-hide px-4 mask-edge-fade">
