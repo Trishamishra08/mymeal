@@ -409,11 +409,14 @@ export default function OrdersPage({ statusKey = "all" }) {
       const deliveryFee = Number(pricing.deliveryFee || 0)
       const platformFee = Number(pricing.platformFee || 0)
       const taxAmount = Number(pricing.tax || 0)
-      const discountAmount = Number(pricing.discount || 0)
+      const discountAmount = Number(pricing.couponDiscount || pricing.discount || 0)
       const computedTotal = subtotal + deliveryFee + platformFee + taxAmount - discountAmount
-      const totalAmount = Number(
+      let totalAmount = Number(
         pricing.total != null ? pricing.total : computedTotal
       )
+      if (discountAmount > 0 && Math.abs(totalAmount - (computedTotal + discountAmount)) < 1) {
+        totalAmount = computedTotal;
+      }
 
       const paymentMethod = order.payment?.method || order.paymentMethod || order.payment?.paymentMethod || ""
       let paymentType = order.paymentType

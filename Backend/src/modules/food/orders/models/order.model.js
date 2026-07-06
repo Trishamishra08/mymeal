@@ -48,6 +48,8 @@ const pricingSchema = new mongoose.Schema(
         paymentGatewayFee: { type: Number, default: 0, min: 0 },
         tcs: { type: Number, default: 0, min: 0 },
         discount: { type: Number, default: 0, min: 0 },
+        couponDiscount: { type: Number, default: 0, min: 0 },
+        couponCode: { type: String, default: null },
         originalTotal: { type: Number, default: 0, min: 0 },
         payableTotal: { type: Number, default: 0, min: 0 },
         subscriptionCreditApplied: { type: Number, default: 0, min: 0 },

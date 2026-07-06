@@ -113,6 +113,11 @@ export async function updateDispatchSettings(dispatchMode, adminId) {
 }
 
 export async function tryAutoAssign(orderId, options = {}) {
+  // Prevent any automatic dispatch unless manually triggered (e.g. from Resend to Riders)
+  if (!options.manualTrigger) {
+    return null;
+  }
+
   const attempt = options.attempt || 1;
   const lockTimeout = 20000; // 20 seconds lock interval
 
@@ -360,11 +365,11 @@ export async function processDispatchTimeout(orderId, partnerId, options = {}) {
     await order.save();
     
     const attempt = options.attempt || (order.dispatch?.offeredTo?.length || 0) + 1;
-    await tryAutoAssign(orderId, { attempt });
+    await tryAutoAssign(orderId, { attempt, manualTrigger: options.manualTrigger });
   } else if (order.dispatch?.status === 'unassigned') {
     // If it's already unassigned (e.g. from a previous timeout), just keep hunting
     const attempt = options.attempt || (order.dispatch?.offeredTo?.length || 0) + 1;
-    await tryAutoAssign(orderId, { attempt });
+    await tryAutoAssign(orderId, { attempt, manualTrigger: options.manualTrigger });
   }
 }
 
@@ -447,7 +452,7 @@ export async function resendDeliveryNotificationRestaurant(orderId, restaurantId
 
   // Manual resend should widen the initial search one tier so nearby riders
   // immediately receive the request instead of waiting for timeout retries.
-  await tryAutoAssign(order._id, { attempt: 2 });
+  await tryAutoAssign(order._id, { attempt: 2, manualTrigger: true });
 
   const refreshed = await FoodOrder.findById(order._id)
     .select('dispatch.offeredTo dispatch.status dispatch.deliveryPartnerId')

@@ -1596,6 +1596,7 @@ export default function Cart() {
         tax: gstCharges,
         platformFee,
         discount,
+        couponDiscount,
         total,
         couponCode: appliedCoupon?.code || null
       };

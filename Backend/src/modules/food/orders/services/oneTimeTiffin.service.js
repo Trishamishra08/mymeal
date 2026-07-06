@@ -265,7 +265,27 @@ export async function createOneTimeTiffinOrder(userId, dto = {}) {
   const couponCode = dto.couponCode ? String(dto.couponCode).trim().toUpperCase() : null;
 
   if (couponCode) {
-    const offer = await FoodOffer.findOne({ couponCode }).lean();
+    let offer = await FoodOffer.findOne({ couponCode }).lean();
+    
+    if (!offer) {
+      const { default: Promocode } = await import('../../../../models/Promocode.js');
+      const promo = await Promocode.findOne({ code: couponCode }).lean();
+      if (promo) {
+        offer = {
+          _id: promo._id,
+          status: promo.isActive ? "active" : "inactive",
+          startDate: promo.startDate,
+          endDate: promo.expiryDate,
+          minOrderValue: promo.minOrderAmount || 0,
+          usageLimit: promo.usageLimit || 0,
+          usedCount: promo.usageCount || 0,
+          discountType: promo.discountType === 'PERCENTAGE' ? 'percentage' : 'flat-price',
+          discountValue: promo.discountValue,
+          maxDiscount: promo.maxDiscountAmount || 0,
+        };
+      }
+    }
+
     if (!offer) {
       couponError = "Invalid or expired coupon code.";
     } else if (offer.status !== 'active') {
@@ -288,6 +308,10 @@ export async function createOneTimeTiffinOrder(userId, dto = {}) {
         discount = Math.max(0, Math.min(subtotal, Math.floor(capped)));
       }
       appliedCoupon = { code: couponCode, discount };
+    }
+    
+    if (couponError) {
+      throw new ValidationError(couponError);
     }
   }
 
@@ -376,7 +400,7 @@ export async function createOneTimeTiffinOrder(userId, dto = {}) {
   await order.save();
 
   if (couponCode && !couponError && appliedCoupon) {
-    const offer = await FoodOffer.findOne({ couponCode }).lean();
+    let offer = await FoodOffer.findOne({ couponCode }).lean();
     if (offer) {
       await FoodOffer.updateOne({ _id: offer._id }, { $inc: { usedCount: 1 } });
       await FoodOfferUsage.updateOne(
@@ -387,6 +411,9 @@ export async function createOneTimeTiffinOrder(userId, dto = {}) {
         },
         { upsert: true }
       );
+    } else {
+      const { default: Promocode } = await import('../../../../models/Promocode.js');
+      await Promocode.updateOne({ code: couponCode }, { $inc: { usageCount: 1 } });
     }
   }
 

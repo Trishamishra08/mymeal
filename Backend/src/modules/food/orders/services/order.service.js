@@ -175,6 +175,8 @@ export async function createOrder(userId, dto) {
     deliveryFee: Number(dto.pricing?.deliveryFee ?? 0),
     platformFee: Number(dto.pricing?.platformFee ?? 0),
     discount: Number(dto.pricing?.discount ?? 0),
+    couponDiscount: Number(dto.pricing?.couponDiscount ?? 0),
+    couponCode: dto.pricing?.couponCode || null,
     total: Number(dto.pricing?.total ?? 0),
     currency: String(dto.pricing?.currency || "INR"),
   };
@@ -193,9 +195,7 @@ export async function createOrder(userId, dto) {
       (Number.isFinite(normalizedPricing.platformFee)
         ? normalizedPricing.platformFee
         : 0) -
-      (Number.isFinite(normalizedPricing.discount)
-        ? normalizedPricing.discount
-        : 0),
+      (Math.max(normalizedPricing.discount || 0, normalizedPricing.couponDiscount || 0)),
   );
   if (
     !Number.isFinite(normalizedPricing.total) ||
@@ -1444,7 +1444,7 @@ export async function resendDeliveryNotificationRestaurant(orderId, restaurantId
     await order.save();
 
     // Trigger smart dispatch logic immediately
-    await tryAutoAssign(order._id);
+    await tryAutoAssign(order._id, { manualTrigger: true });
 
     return { success: true };
 }

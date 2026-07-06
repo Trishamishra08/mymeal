@@ -39,6 +39,8 @@ const pricingSchema = z.object({
     deliveryFee: z.number().min(0).optional(),
     platformFee: z.number().min(0).optional(),
     discount: z.number().min(0).optional(),
+    couponDiscount: z.number().min(0).optional(),
+    couponCode: z.string().nullable().optional(),
     total: z.number().min(0),
     currency: z.string().optional()
 });
