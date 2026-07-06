@@ -2,9 +2,9 @@ import { z } from 'zod';
 import { ValidationError } from '../../../../core/auth/errors.js';
 
 const createSubscriptionOrderSchema = z.object({
-  dishId: z.string().min(1, 'Dish id required'),
-  dishName: z.string().min(1, 'Dish name required'),
-  restaurantId: z.string().min(1, 'Restaurant id required'),
+  dishId: z.string().optional(),
+  dishName: z.string().optional(),
+  restaurantId: z.string().optional(),
   restaurantName: z.string().optional(),
   meals: z.array(z.string().min(1)).min(1, 'At least one meal is required'),
   planId: z.string().optional(),

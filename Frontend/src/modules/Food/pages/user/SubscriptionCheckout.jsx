@@ -56,7 +56,15 @@ export default function SubscriptionCheckout() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [appCustomization, setAppCustomization] = useState(DEFAULT_APP_CUSTOMIZATION);
 
-  const { dish, selectedMeals = [], subscriptionPlan, selectedDeliveryAddress } = location.state || {};
+  const { dish, subscriptionPlan, selectedDeliveryAddress } = location.state || {};
+  
+  let selectedMeals = location.state?.selectedMeals || [];
+  if (!selectedMeals.length && subscriptionPlan?.mealType) {
+    selectedMeals = subscriptionPlan.mealType
+      .split("+")
+      .map((m) => ({ title: m.trim() }))
+      .filter((m) => m.title);
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -74,10 +82,18 @@ export default function SubscriptionCheckout() {
     };
   }, [navigate]);
 
-  const basePrice = Math.max(0, Number.parseFloat(dish?.price || 0) || 0);
   const mealCount = selectedMeals.length || 1;
   const days = subscriptionPlan?.durationDays || 30;
-  const totalFoodCost = roundMoney(basePrice * mealCount * days);
+
+  let totalFoodCost = 0;
+  let basePrice = 0;
+  if (dish?.price && dish?.price > 0) {
+    basePrice = Math.max(0, Number.parseFloat(dish.price));
+    totalFoodCost = roundMoney(basePrice * mealCount * days);
+  } else {
+    totalFoodCost = Math.max(0, Number.parseFloat(subscriptionPlan?.price || 0) || 0);
+    basePrice = roundMoney(totalFoodCost / (mealCount * days));
+  }
   const gstAmount = roundMoney(totalFoodCost * (SUBSCRIPTION_GST_RATE / 100));
   const deliveryFeePerDay = SUBSCRIPTION_DELIVERY_FEE_PER_DAY;
   const totalDeliveryCharges = roundMoney(deliveryFeePerDay * days);
@@ -181,32 +197,14 @@ export default function SubscriptionCheckout() {
       totalAmount,
     });
 
-    if (!dish?.restaurantId) {
-      console.warn("[SubscriptionCheckout] Missing restaurantId", {
-        dish,
-        rawState: location.state || null,
-      });
-      toast.error("Restaurant details are missing for this dish.");
-      return;
-    }
-
-    if (!dish?.itemId && !dish?.id) {
-      console.warn("[SubscriptionCheckout] Missing dish/item id", {
-        dish,
-        rawState: location.state || null,
-      });
-      toast.error("Dish details are missing for this subscription.");
-      return;
-    }
-
     if (!selectedMeals.length) {
       toast.error("Please select at least one meal.");
       navigate(-1);
       return;
     }
 
-    if (basePrice <= 0) {
-      toast.error("Dish price is missing for this subscription.");
+    if (totalFoodCost <= 0) {
+      toast.error("Plan price is missing for this subscription.");
       return;
     }
 
@@ -222,10 +220,10 @@ export default function SubscriptionCheckout() {
       const customerName = userProfile?.name || userProfile?.fullName || "User";
       const customerPhone = userProfile?.phone || defaultAddress?.phone || "";
       const payload = {
-        dishId: dish.itemId || dish.id,
-        dishName: dish.name || "Subscription meal",
-        restaurantId: dish.restaurantId,
-        restaurantName: dish.restaurantName || "",
+        dishId: dish?.itemId || dish?.id || "plan_only",
+        dishName: dish?.name || "Subscription Plan",
+        restaurantId: dish?.restaurantId || "",
+        restaurantName: dish?.restaurantName || "",
         meals: selectedMeals
           .map((meal) => String(meal?.title || meal?.name || "").trim())
           .filter(Boolean),
@@ -277,7 +275,7 @@ export default function SubscriptionCheckout() {
         }
 
         toast.success("Subscription activated successfully.");
-        navigate("/food/user/profile", { replace: true });
+        navigate("/food/user/profile/subscriptions", { replace: true });
         setIsPlacingOrder(false);
         return;
       }
@@ -343,7 +341,7 @@ export default function SubscriptionCheckout() {
             }
 
             toast.success("Subscription activated successfully.");
-            navigate("/food/user/profile", { replace: true });
+            navigate("/food/user/profile/subscriptions", { replace: true });
           } catch (error) {
             if (error?.response?.status === 401) {
               toast.info("Please login to continue.");

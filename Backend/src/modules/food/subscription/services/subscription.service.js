@@ -531,13 +531,20 @@ export async function createSubscriptionOrder(userId, dto) {
     throw new ValidationError('Razorpay is not configured');
   }
 
-  if (!mongoose.isValidObjectId(dto.restaurantId)) {
-    throw new ValidationError('Restaurant id is invalid');
+  let restaurant = null;
+  if (mongoose.isValidObjectId(dto.restaurantId)) {
+    restaurant = await FoodRestaurant.findById(dto.restaurantId)
+      .select('restaurantName status isAcceptingOrders')
+      .lean();
+  } else {
+    restaurant = await FoodRestaurant.findOne({ status: 'approved' })
+      .select('restaurantName status isAcceptingOrders')
+      .lean();
+    if (restaurant) {
+      dto.restaurantId = restaurant._id.toString();
+    }
   }
 
-  const restaurant = await FoodRestaurant.findById(dto.restaurantId)
-    .select('restaurantName status isAcceptingOrders')
-    .lean();
   if (!restaurant) throw new ValidationError('Restaurant not found');
   if (restaurant.status !== 'approved' || restaurant.isAcceptingOrders === false) {
     throw new ValidationError('Restaurant is not accepting orders');
@@ -574,9 +581,13 @@ export async function createSubscriptionOrder(userId, dto) {
       ? await FoodItem.findById(dto.dishId).select('price').lean()
       : null;
     itemPrice = Number(dish?.price || 0);
+    
+    if ((!Number.isFinite(itemPrice) || itemPrice <= 0) && plan) {
+       itemPrice = Number(plan.price || 0) / (mealCount * planDays);
+    }
   }
   if (!Number.isFinite(itemPrice) || itemPrice <= 0) {
-    throw new ValidationError('Dish price is required for subscription');
+    throw new ValidationError('Price is required for subscription');
   }
 
   const foodSubtotal = roundMoney(itemPrice * mealCount * planDays);
