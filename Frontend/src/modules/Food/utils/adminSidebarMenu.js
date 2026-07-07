@@ -155,6 +155,7 @@ export const adminSidebarMenu = [
         label: "Subscription",
         icon: "Package",
         subItems: [
+          { label: "Today's Orders", path: "/admin/food/subscriptions/today-orders" },
           { label: "All", path: "/admin/food/subscriptions/all" },
           { label: "Status", path: "/admin/food/subscriptions/status" },
           { label: "Plans", path: "/admin/food/subscription-plan-management" },

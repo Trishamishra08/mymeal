@@ -13,6 +13,7 @@ const FoodApproval = lazy(() => import("@food/pages/admin/restaurant/FoodApprova
 const OrdersPage = lazy(() => import("@food/pages/admin/orders/OrdersPage"));
 const OrderDetectDelivery = lazy(() => import("@food/pages/admin/OrderDetectDelivery"));
 const SubscriptionOrders = lazy(() => import("@food/pages/admin/SubscriptionOrders"));
+const TodaySubscriptionOrders = lazy(() => import("@food/pages/admin/subscriptions/TodaySubscriptionOrders"));
 const SubscriptionStatus = lazy(() => import("@food/pages/admin/SubscriptionStatus"));
 const AppCustomization = lazy(() => import("@food/pages/admin/app-customization/AppCustomization"));
 const TimeManagement = lazy(() => import("@food/pages/admin/app-customization/TimeManagement"));
@@ -185,6 +186,7 @@ export default function AdminRouter() {
 
             {/* SUBSCRIPTION MANAGEMENT */}
             <Route path="subscriptions/all" element={<SubscriptionOrders />} />
+            <Route path="subscriptions/today-orders" element={<TodaySubscriptionOrders />} />
             <Route path="subscriptions/status" element={<SubscriptionStatus />} />
 
             {/* RESTAURANT MANAGEMENT */}

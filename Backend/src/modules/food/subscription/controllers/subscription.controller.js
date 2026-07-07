@@ -5,6 +5,7 @@ import {
   validateCreateSubscriptionOrderDto,
   validateVerifyDishChangePaymentDto,
   validateVerifySubscriptionPaymentDto,
+  validateCustomizeSubscriptionItemsDto,
 } from '../validators/subscription.validator.js';
 import * as subscriptionService from '../services/subscription.service.js';
 
@@ -83,6 +84,21 @@ export async function changeSubscriptionDishController(req, res, next) {
   }
 }
 
+export async function customizeSubscriptionItemsController(req, res, next) {
+  try {
+    const userId = req.user?.userId;
+    const dto = validateCustomizeSubscriptionItemsDto(req.body);
+    const result = await subscriptionService.customizeSubscriptionItems(
+      userId,
+      req.params.scheduleId,
+      dto,
+    );
+    return sendResponse(res, 200, 'Subscription items customized successfully', result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function changeSubscriptionAddressController(req, res, next) {
   try {
     const userId = req.user?.userId;
@@ -113,11 +129,69 @@ export async function verifyDishChangePaymentController(req, res, next) {
   }
 }
 
+export async function skipSubscriptionScheduleController(req, res, next) {
+  try {
+    const userId = req.user?.userId;
+    const result = await subscriptionService.skipSubscriptionSchedule(
+      userId,
+      req.params.scheduleId,
+    );
+    return sendResponse(res, 200, 'Subscription meal skipped successfully', result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function addExtraTiffinController(req, res, next) {
+  try {
+    const userId = req.user?.userId;
+    const dto = { dishId: req.body?.dishId };
+    if (!dto.dishId) throw new Error('Dish ID is required for add-on');
+    const result = await subscriptionService.addExtraTiffin(
+      userId,
+      req.params.scheduleId,
+      dto,
+    );
+    return sendResponse(res, 200, 'Extra tiffin payment initialized', result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function verifyExtraTiffinPaymentController(req, res, next) {
+  try {
+    const userId = req.user?.userId;
+    // We can reuse the dish change verification DTO since it expects razorpayOrderId, paymentId, signature
+    const dto = validateVerifyDishChangePaymentDto(req.body);
+    dto.dishId = req.body?.dishId;
+    if (!dto.dishId) throw new Error('Dish ID is required for add-on');
+    const result = await subscriptionService.verifyExtraTiffinPayment(
+      userId,
+      req.params.scheduleId,
+      dto,
+    );
+    return sendResponse(res, 200, 'Extra tiffin added successfully', result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function listTodaySubscriptionMealsRestaurantController(req, res, next) {
   try {
     const restaurantId = req.user?.userId;
     const result = await subscriptionService.listTodaySubscriptionMealsForRestaurant(
       restaurantId,
+      req.query || {},
+    );
+    return sendResponse(res, 200, 'Subscription meals retrieved', result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listTodaySubscriptionMealsAdminController(req, res, next) {
+  try {
+    const result = await subscriptionService.listTodaySubscriptionMealsAdmin(
       req.query || {},
     );
     return sendResponse(res, 200, 'Subscription meals retrieved', result);
@@ -161,6 +235,35 @@ export async function cancelSubscriptionForRestaurantController(req, res, next) 
       req.body?.reason || '',
     );
     return sendResponse(res, 200, 'Subscription cancelled', result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function cancelAddOnTiffinController(req, res, next) {
+  try {
+    const userId = req.user?.userId;
+    const result = await subscriptionService.cancelAddOnTiffin(
+      userId,
+      req.params.scheduleId,
+      req.params.addOnId,
+    );
+    return sendResponse(res, 200, 'Add-on tiffin cancelled and refunded successfully', result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function customizeAddOnTiffinController(req, res, next) {
+  try {
+    const userId = req.user?.userId;
+    const result = await subscriptionService.customizeAddOnTiffin(
+      userId,
+      req.params.scheduleId,
+      req.params.addOnId,
+      req.body?.selections || {},
+    );
+    return sendResponse(res, 200, 'Add-on tiffin customized successfully', result);
   } catch (err) {
     next(err);
   }

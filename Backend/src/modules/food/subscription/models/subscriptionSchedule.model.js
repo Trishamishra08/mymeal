@@ -41,6 +41,15 @@ const subscriptionScheduleSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    selections: {
+      type: Map,
+      of: String,
+      default: {},
+    },
+    customizedAt: {
+      type: Date,
+      default: null,
+    },
     serviceDate: {
       type: Date,
       required: true,
@@ -79,6 +88,20 @@ const subscriptionScheduleSchema = new mongoose.Schema(
       razorpayOrderId: { type: String, trim: true, default: '' },
       createdAt: { type: Date, default: null },
     },
+    addOnTiffins: [
+      {
+        dishId: { type: String, trim: true, required: true },
+        dishName: { type: String, trim: true, required: true },
+        price: { type: Number, required: true },
+        paidAmount: { type: Number, required: true },
+        addedAt: { type: Date, default: Date.now },
+        razorpayOrderId: { type: String, trim: true, default: '' },
+        razorpayPaymentId: { type: String, trim: true, default: '' },
+        selections: { type: Map, of: String, default: {} },
+        status: { type: String, enum: ['active', 'cancelled', 'refunded'], default: 'active' },
+        refundId: { type: String, default: '' },
+      }
+    ],
     sentAt: {
       type: Date,
       default: null,

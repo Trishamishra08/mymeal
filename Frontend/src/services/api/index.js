@@ -2611,6 +2611,43 @@ export const subscriptionAPI = {
       body ?? {},
       { contextModule: "user" },
     ),
+  skipSchedule: (scheduleId) =>
+    apiClient.post(
+      `/food/subscriptions/schedules/${String(scheduleId)}/skip`,
+      {},
+      { contextModule: "user" },
+    ),
+  addExtraTiffin: (scheduleId, body) =>
+    apiClient.post(
+      `/food/subscriptions/schedules/${String(scheduleId)}/add-on`,
+      body ?? {},
+      { contextModule: "user" },
+    ),
+  verifyExtraTiffinPayment: (scheduleId, body) =>
+    apiClient.post(
+      `/food/subscriptions/schedules/${String(scheduleId)}/add-on/verify-payment`,
+      body ?? {},
+      { contextModule: "user" },
+    ),
+  customizeScheduleItems: (scheduleId, body) =>
+    apiClient.post(
+      `/food/subscriptions/schedules/${String(scheduleId)}/customize-items`,
+      body ?? {},
+      { contextModule: "user" },
+    ),
+  cancelAddOnTiffin: (scheduleId, addOnId) =>
+    apiClient.delete(
+      `/food/subscriptions/schedules/${String(scheduleId)}/add-ons/${String(addOnId)}`,
+      { contextModule: "user" },
+    ),
+  customizeAddOnTiffin: (scheduleId, addOnId, body) =>
+    apiClient.put(
+      `/food/subscriptions/schedules/${String(scheduleId)}/add-ons/${String(addOnId)}/customize`,
+      body ?? {},
+      { contextModule: "user" },
+    ),
+  getTodaySubscriptionSchedulesAdmin: (params = {}) =>
+    apiClient.get(`/food/admin/subscriptions/schedules/today`, { params, contextModule: "admin" }),
 };
 
 // Dining bookings now handled by backend

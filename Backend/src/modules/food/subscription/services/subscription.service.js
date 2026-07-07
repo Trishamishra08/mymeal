@@ -13,6 +13,7 @@ import {
   getRazorpayKeyId,
   isRazorpayConfigured,
   verifyPaymentSignature,
+  initiateRazorpayRefund,
 } from '../../orders/helpers/razorpay.helper.js';
 import * as userWalletService from '../../user/services/userWallet.service.js';
 import * as foodTransactionService from '../../orders/services/foodTransaction.service.js';
@@ -1753,5 +1754,188 @@ export async function getSubscriptionAdmin(subscriptionId) {
       scheduleId: schedule._id?.toString?.() || String(schedule._id || ''),
     })),
   };
+}
+
+export async function cancelAddOnTiffin(userId, scheduleId, addOnId) {
+  if (!mongoose.isValidObjectId(scheduleId)) {
+    throw new ValidationError('Subscription schedule id is invalid');
+  }
+
+  const schedule = await FoodSubscriptionSchedule.findOne({
+    _id: new mongoose.Types.ObjectId(scheduleId),
+    userId: new mongoose.Types.ObjectId(userId),
+  }).populate('subscriptionId');
+
+  if (!schedule) throw new NotFoundError('Subscription meal not found');
+
+  if (schedule.status === 'sent_to_delivery' || schedule.status === 'cancelled' || schedule.status === 'skipped') {
+    throw new ValidationError('Cannot modify add-ons for this meal');
+  }
+
+  const addonIndex = schedule.addOnTiffins.findIndex(a => a._id.toString() === addOnId);
+  if (addonIndex === -1) {
+    throw new NotFoundError('Add-on not found');
+  }
+
+  const addon = schedule.addOnTiffins[addonIndex];
+  if (addon.status !== 'active') {
+    throw new ValidationError(`Add-on is already ${addon.status}`);
+  }
+
+  // Issue refund if Razorpay Payment ID exists
+  if (addon.razorpayPaymentId && !addon.razorpayPaymentId.startsWith('test_pay_')) {
+    try {
+      if (addon.paidAmount > 0) {
+        const refundResponse = await initiateRazorpayRefund(addon.razorpayPaymentId, addon.paidAmount);
+        if (refundResponse.success) {
+          addon.refundId = refundResponse.refundId;
+        } else {
+          console.error('Razorpay refund failed:', refundResponse.error);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to issue add-on refund:', err);
+      throw new Error('Failed to process refund. Please contact support.');
+    }
+  }
+
+  addon.status = 'refunded';
+  await schedule.save();
+
+  return normalizeSubscriptionSchedule(schedule);
+}
+
+export async function customizeAddOnTiffin(userId, scheduleId, addOnId, selectionsDto) {
+  if (!mongoose.isValidObjectId(scheduleId)) {
+    throw new ValidationError('Subscription schedule id is invalid');
+  }
+
+  const schedule = await FoodSubscriptionSchedule.findOne({
+    _id: new mongoose.Types.ObjectId(scheduleId),
+    userId: new mongoose.Types.ObjectId(userId),
+  });
+
+  if (!schedule) throw new NotFoundError('Subscription meal not found');
+
+  if (schedule.status === 'sent_to_delivery' || schedule.status === 'cancelled' || schedule.status === 'skipped') {
+    throw new ValidationError('Cannot modify add-ons for this meal');
+  }
+
+  const addonIndex = schedule.addOnTiffins.findIndex(a => a._id.toString() === addOnId);
+  if (addonIndex === -1) {
+    throw new NotFoundError('Add-on not found');
+  }
+
+  const addon = schedule.addOnTiffins[addonIndex];
+  if (addon.status !== 'active') {
+    throw new ValidationError(`Add-on is ${addon.status} and cannot be modified`);
+  }
+
+  const dish = await FoodItem.findById(addon.dishId).lean();
+  if (!dish) throw new NotFoundError('Dish not found');
+
+  const validatedSelections = new Map();
+  if (selectionsDto && typeof selectionsDto === 'object') {
+    for (const [groupId, selectedItemId] of Object.entries(selectionsDto)) {
+      if (!selectedItemId) continue;
+      const group = dish.customizableGroups?.find((g) => g.groupId === groupId);
+      if (group) {
+        const item = group.items?.find((i) => i.itemId === selectedItemId);
+        if (item) {
+          validatedSelections.set(groupId, selectedItemId);
+        }
+      }
+    }
+  }
+  addon.selections = validatedSelections;
+  await schedule.save();
+
+  return normalizeSubscriptionSchedule(schedule);
+}
+
+export async function addExtraTiffin(userId, scheduleId, dto) {
+  if (!mongoose.isValidObjectId(scheduleId)) {
+    throw new ValidationError('Subscription schedule id is invalid');
+  }
+
+  const schedule = await FoodSubscriptionSchedule.findOne({
+    _id: new mongoose.Types.ObjectId(scheduleId),
+    userId: new mongoose.Types.ObjectId(userId),
+  }).populate('subscriptionId');
+
+  if (!schedule) throw new NotFoundError('Subscription meal not found');
+
+  if (schedule.status === 'sent_to_delivery' || schedule.status === 'cancelled' || schedule.status === 'skipped') {
+    throw new ValidationError('Cannot add extra tiffin for this meal');
+  }
+
+  const dish = await FoodItem.findById(dto.dishId).lean();
+  if (!dish) throw new NotFoundError('Dish not found');
+
+  if (dish.price <= 0) {
+    throw new ValidationError('Invalid dish price for extra tiffin');
+  }
+
+  // Create razorpay order
+  const razorpayOrder = await createRazorpayOrder(
+    dish.price * 100,
+    'INR',
+    `addon_${schedule._id}_${Date.now()}`
+  );
+
+  return {
+    razorpay: {
+      key: process.env.RAZORPAY_KEY_ID || getRazorpayKeyId(),
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+      orderId: razorpayOrder.id,
+      directTestMode: process.env.RAZORPAY_TEST_MODE === 'true',
+    },
+  };
+}
+
+export async function verifyExtraTiffinPayment(userId, scheduleId, dto) {
+  if (!mongoose.isValidObjectId(scheduleId)) {
+    throw new ValidationError('Subscription schedule id is invalid');
+  }
+
+  const schedule = await FoodSubscriptionSchedule.findOne({
+    _id: new mongoose.Types.ObjectId(scheduleId),
+    userId: new mongoose.Types.ObjectId(userId),
+  }).populate('subscriptionId');
+
+  if (!schedule) throw new NotFoundError('Subscription meal not found');
+
+  if (schedule.status === 'sent_to_delivery' || schedule.status === 'cancelled' || schedule.status === 'skipped') {
+    throw new ValidationError('Cannot modify add-ons for this meal');
+  }
+
+  const dish = await FoodItem.findById(dto.dishId).lean();
+  if (!dish) throw new NotFoundError('Dish not found');
+
+  // Verify signature
+  if (!dto.razorpayPaymentId.startsWith('test_pay_')) {
+    const isValid = verifyPaymentSignature(
+      dto.razorpayOrderId,
+      dto.razorpayPaymentId,
+      dto.razorpaySignature
+    );
+    if (!isValid) throw new ValidationError('Invalid payment signature');
+  }
+
+  // Add to addOnTiffins
+  schedule.addOnTiffins.push({
+    dishId: dish._id.toString(),
+    dishName: dish.name,
+    price: dish.price,
+    paidAmount: dish.price,
+    addedAt: new Date(),
+    razorpayOrderId: dto.razorpayOrderId,
+    razorpayPaymentId: dto.razorpayPaymentId,
+  });
+
+  await schedule.save();
+
+  return normalizeSubscriptionSchedule(schedule);
 }
 

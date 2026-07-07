@@ -48,6 +48,10 @@ const changeSubscriptionDishSchema = z.object({
   dishId: z.string().min(1, 'Dish id required'),
 });
 
+const customizeSubscriptionItemsSchema = z.object({
+  selections: z.record(z.string(), z.string()).optional(),
+});
+
 const subscriptionAddressSchema = z.object({
   label: z.string().optional(),
   name: z.string().optional(),
@@ -100,6 +104,12 @@ export function validateVerifySubscriptionPaymentDto(body) {
 
 export function validateChangeSubscriptionDishDto(body) {
   const result = changeSubscriptionDishSchema.safeParse(body || {});
+  if (!result.success) toValidationError(result);
+  return result.data;
+}
+
+export function validateCustomizeSubscriptionItemsDto(body) {
+  const result = customizeSubscriptionItemsSchema.safeParse(body || {});
   if (!result.success) toValidationError(result);
   return result.data;
 }
