@@ -15,30 +15,37 @@ import { logger } from '../../../../utils/logger.js';
 
 async function injectAdminBusinessLocation(data) {
   if (!data) return data;
-  const { FoodBusinessSettings } = await import('../../admin/models/businessSettings.model.js');
-  const settings = await FoodBusinessSettings.findOne({}).lean();
-  
+
   const inject = (out) => {
     if (!out) return out;
-    if (settings) {
-        out.restaurantName = settings.companyName || 'MyMeal';
-        out.restaurantAddress = settings.address || '';
-        out.restaurantPhone = settings.phone?.number || '';
-        if (settings.location?.coordinates) {
-          out.restaurantLocation = {
-            latitude: settings.location.coordinates[1],
-            longitude: settings.location.coordinates[0],
-            address: settings.address || '',
-            area: settings.region || '',
-            city: settings.state || '',
-            state: settings.state || ''
-          };
-        }
-    } else {
-        out.restaurantName = 'MyMeal';
-        out.restaurantAddress = '';
+    const source = out.restaurantId || out.restaurant || null;
+    const location = source?.location || {};
+    if (source) {
+      out.restaurantName = source.restaurantName || source.name || out.restaurantName || '';
+      out.restaurantPhone = source.phone || source.ownerPhone || out.restaurantPhone || '';
+      out.restaurantAddress =
+        source.address ||
+        source.addressLine1 ||
+        location.formattedAddress ||
+        location.address ||
+        out.restaurantAddress ||
+        '';
+      if (
+        Number.isFinite(Number(location?.coordinates?.[1])) &&
+        Number.isFinite(Number(location?.coordinates?.[0]))
+      ) {
+        out.restaurantLocation = {
+          latitude: Number(location.coordinates[1]),
+          longitude: Number(location.coordinates[0]),
+          address:
+            location.address || location.formattedAddress || out.restaurantAddress || '',
+          area: location.area || '',
+          city: location.city || '',
+          state: location.state || '',
+        };
+      }
     }
-    // Delete explicit restaurant data to prevent leaking Suhani Pathak
+
     delete out.restaurantId;
     delete out.restaurant;
     return out;

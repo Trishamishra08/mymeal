@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   CalendarDays,
@@ -50,14 +50,33 @@ const formatFullAddress = (address) => {
 export default function SubscriptionCheckout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { userProfile, getDefaultAddress, isAuthenticated } = useProfile();
   const { location: currentLocation } = useUserLocation();
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [appCustomization, setAppCustomization] = useState(DEFAULT_APP_CUSTOMIZATION);
 
-  const { dish, subscriptionPlan, selectedDeliveryAddress } = location.state || {};
-  
+  const stateDish = location.state?.dish || null;
+  const statePlan = location.state?.subscriptionPlan || null;
+  const selectedDeliveryAddress = location.state?.selectedDeliveryAddress;
+
+  const dish = useMemo(() => ({
+    id: stateDish?.id || stateDish?.itemId || searchParams.get("dishId") || "",
+    itemId: stateDish?.itemId || stateDish?.id || searchParams.get("dishId") || "",
+    name: stateDish?.name || searchParams.get("dish") || "Selected meal",
+    categoryName: stateDish?.categoryName || searchParams.get("category") || "",
+    price: stateDish?.price || searchParams.get("price") || "",
+    image: stateDish?.image || "",
+    foodType: stateDish?.foodType || "",
+  }), [stateDish, searchParams]);
+
+  const subscriptionPlan = useMemo(() => {
+    if (statePlan) return statePlan;
+    const fallbackPlanId = searchParams.get("planId") || "";
+    return fallbackPlanId ? { id: fallbackPlanId } : null;
+  }, [statePlan, searchParams]);
+
   let selectedMeals = location.state?.selectedMeals || [];
   if (!selectedMeals.length && subscriptionPlan?.mealType) {
     selectedMeals = subscriptionPlan.mealType
@@ -220,10 +239,7 @@ export default function SubscriptionCheckout() {
       const customerName = userProfile?.name || userProfile?.fullName || "User";
       const customerPhone = userProfile?.phone || defaultAddress?.phone || "";
       const payload = {
-        dishId: dish?.itemId || dish?.id || "plan_only",
-        dishName: dish?.name || "Subscription Plan",
-        restaurantId: dish?.restaurantId || "",
-        restaurantName: dish?.restaurantName || "",
+        dishId: dish?.itemId || dish?.id || "",
         meals: selectedMeals
           .map((meal) => String(meal?.title || meal?.name || "").trim())
           .filter(Boolean),

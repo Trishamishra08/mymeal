@@ -177,7 +177,7 @@ export default function SubscriptionCustomizeModal({
               variant="outline"
               className="flex h-16 w-full items-center justify-start justify-between rounded-xl border-gray-200 px-4 hover:border-green-600 hover:bg-green-50 dark:border-gray-800 dark:hover:bg-green-900/20"
               onClick={() => {
-                const defaultDish = availableDishes.find(d => d._id === schedule.dishId) || availableDishes[0];
+                const defaultDish = availableDishes.find(d => (d._id || d.id || d.dishId) === (schedule.dishId || schedule.dish?._id || schedule.dish?.id)) || availableDishes[0];
                 if (defaultDish) handleAddExtraTiffin(defaultDish);
               }}
               disabled={!schedule.canChangeDish || availableDishes.length === 0 || loading}

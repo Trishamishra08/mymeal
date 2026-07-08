@@ -214,7 +214,16 @@ export default function ChooseMeal() {
     const mealsToPass = mealSlots
       .filter((slot) => selectedSlots.includes(slot.id))
       .map(({ icon, ...rest }) => rest);
-    navigate("/food/user/subscription-plans", {
+    const params = new URLSearchParams();
+    if (dish.itemId || dish.id) params.set("dishId", dish.itemId || dish.id);
+    if (dish.name) params.set("dish", dish.name);
+    if (dish.categoryName) params.set("category", dish.categoryName);
+    if (dish.price) params.set("price", String(dish.price));
+
+    navigate({
+      pathname: "/food/user/subscription-plans",
+      search: params.toString() ? `?${params.toString()}` : "",
+    }, {
       state: {
         dish,
         selectedMeals: mealsToPass,

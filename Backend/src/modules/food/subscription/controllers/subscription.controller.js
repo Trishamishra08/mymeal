@@ -1,4 +1,5 @@
 import { sendResponse } from '../../../../utils/response.js';
+import { ValidationError } from '../../../../core/auth/errors.js';
 import {
   validateChangeSubscriptionAddressDto,
   validateChangeSubscriptionDishDto,
@@ -146,7 +147,7 @@ export async function addExtraTiffinController(req, res, next) {
   try {
     const userId = req.user?.userId;
     const dto = { dishId: req.body?.dishId };
-    if (!dto.dishId) throw new Error('Dish ID is required for add-on');
+    if (!dto.dishId) throw new ValidationError('Dish ID is required for add-on');
     const result = await subscriptionService.addExtraTiffin(
       userId,
       req.params.scheduleId,
@@ -164,7 +165,7 @@ export async function verifyExtraTiffinPaymentController(req, res, next) {
     // We can reuse the dish change verification DTO since it expects razorpayOrderId, paymentId, signature
     const dto = validateVerifyDishChangePaymentDto(req.body);
     dto.dishId = req.body?.dishId;
-    if (!dto.dishId) throw new Error('Dish ID is required for add-on');
+    if (!dto.dishId) throw new ValidationError('Dish ID is required for add-on');
     const result = await subscriptionService.verifyExtraTiffinPayment(
       userId,
       req.params.scheduleId,
@@ -206,6 +207,17 @@ export async function sendSubscriptionMealToDeliveryController(req, res, next) {
     const result = await subscriptionService.sendSubscriptionMealToDelivery(
       req.params.scheduleId,
       restaurantId,
+    );
+    return sendResponse(res, 200, 'Subscription meal sent to delivery', result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function sendSubscriptionMealToDeliveryAdminController(req, res, next) {
+  try {
+    const result = await subscriptionService.sendSubscriptionMealToDeliveryAdmin(
+      req.params.scheduleId
     );
     return sendResponse(res, 200, 'Subscription meal sent to delivery', result);
   } catch (err) {

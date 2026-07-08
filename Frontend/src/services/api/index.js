@@ -2648,6 +2648,12 @@ export const subscriptionAPI = {
     ),
   getTodaySubscriptionSchedulesAdmin: (params = {}) =>
     apiClient.get(`/food/admin/subscriptions/schedules/today`, { params, contextModule: "admin" }),
+  sendSubscriptionMealToDeliveryAdmin: (scheduleId) =>
+    apiClient.post(
+      `/food/admin/subscriptions/schedules/${String(scheduleId)}/send-to-delivery`,
+      {},
+      { contextModule: "admin" },
+    ),
 };
 
 // Dining bookings now handled by backend

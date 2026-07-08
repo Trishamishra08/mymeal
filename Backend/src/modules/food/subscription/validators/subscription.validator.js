@@ -3,9 +3,6 @@ import { ValidationError } from '../../../../core/auth/errors.js';
 
 const createSubscriptionOrderSchema = z.object({
   dishId: z.string().optional(),
-  dishName: z.string().optional(),
-  restaurantId: z.string().optional(),
-  restaurantName: z.string().optional(),
   meals: z.array(z.string().min(1)).min(1, 'At least one meal is required'),
   planId: z.string().optional(),
   planDays: z.number().int().min(1, 'Plan days must be at least 1'),

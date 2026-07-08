@@ -431,11 +431,7 @@ export function computeSubscriptionOrderAdjustment(subscriptionDoc, orderTotal) 
   };
 }
 
-export async function getApplicableActiveSubscription(
-  userId,
-  restaurantId,
-  { restaurantName } = {},
-) {
+export async function getApplicableActiveSubscription(userId, restaurantId) {
   if (!mongoose.isValidObjectId(userId)) {
     return null;
   }
@@ -457,32 +453,10 @@ export async function getApplicableActiveSubscription(
       .lean();
   }
 
-  let matchedSubscription =
-    candidates.find((subscription) => isSubscriptionActiveNow(subscription)) || null;
-
-  const normalizedRestaurantName = String(restaurantName || '').trim().toLowerCase();
-  if (!matchedSubscription && normalizedRestaurantName) {
-    const fallbackCandidates = await FoodSubscription.find(baseFilter)
-      .sort({ createdAt: -1 })
-      .lean();
-
-    matchedSubscription =
-      fallbackCandidates.find((subscription) => {
-        const subscriptionRestaurantName = String(
-          subscription.restaurantName || '',
-        )
-          .trim()
-          .toLowerCase();
-
-        return (
-          subscriptionRestaurantName &&
-          subscriptionRestaurantName === normalizedRestaurantName &&
-          isSubscriptionActiveNow(subscription)
-        );
-      }) || null;
-  }
-
-  return matchedSubscription;
+  return (
+    candidates.find((subscription) => isSubscriptionActiveNow(subscription)) ||
+    null
+  );
 }
 
 export async function consumeSubscriptionCredit({
@@ -532,18 +506,33 @@ export async function createSubscriptionOrder(userId, dto) {
     throw new ValidationError('Razorpay is not configured');
   }
 
+  const selectedDishId = String(dto.dishId || '').trim();
+  if (!mongoose.isValidObjectId(selectedDishId)) {
+    throw new ValidationError('Dish id is required for subscription');
+  }
+
+  const selectedDish = await FoodItem.findById(selectedDishId)
+    .select('name price restaurantId')
+    .lean();
+  if (!selectedDish) {
+    throw new ValidationError('Selected dish not found');
+  }
+
+  const derivedRestaurantId =
+    selectedDish?.restaurantId?._id?.toString?.() ||
+    selectedDish?.restaurantId?.toString?.() ||
+    '';
+
   let restaurant = null;
-  if (mongoose.isValidObjectId(dto.restaurantId)) {
-    restaurant = await FoodRestaurant.findById(dto.restaurantId)
+  if (mongoose.isValidObjectId(derivedRestaurantId)) {
+    restaurant = await FoodRestaurant.findById(derivedRestaurantId)
       .select('restaurantName status isAcceptingOrders')
       .lean();
-  } else {
+  }
+  if (!restaurant) {
     restaurant = await FoodRestaurant.findOne({ status: 'approved' })
       .select('restaurantName status isAcceptingOrders')
       .lean();
-    if (restaurant) {
-      dto.restaurantId = restaurant._id.toString();
-    }
   }
 
   if (!restaurant) throw new ValidationError('Restaurant not found');
@@ -578,11 +567,8 @@ export async function createSubscriptionOrder(userId, dto) {
   const mealCount = meals.length;
   let itemPrice = Number(dto.itemPrice || 0);
   if (!Number.isFinite(itemPrice) || itemPrice <= 0) {
-    const dish = mongoose.isValidObjectId(dto.dishId)
-      ? await FoodItem.findById(dto.dishId).select('price').lean()
-      : null;
-    itemPrice = Number(dish?.price || 0);
-    
+    itemPrice = Number(selectedDish?.price || 0);
+
     if ((!Number.isFinite(itemPrice) || itemPrice <= 0) && plan) {
        itemPrice = Number(plan.price || 0) / (mealCount * planDays);
     }
@@ -629,13 +615,17 @@ export async function createSubscriptionOrder(userId, dto) {
     `sub_${Date.now()}`,
   );
 
+  const storedDishId = selectedDish._id?.toString?.() || selectedDishId;
+  const storedDishName = String(
+    selectedDish?.name || plan?.title || 'Subscription Plan',
+  ).trim();
+
   const subscription = await FoodSubscription.create({
     userId: new mongoose.Types.ObjectId(userId),
-    restaurantId: new mongoose.Types.ObjectId(dto.restaurantId),
-    dishId: String(dto.dishId).trim(),
-    dishName: String(dto.dishName).trim(),
-    restaurantName:
-      String(dto.restaurantName || restaurant.restaurantName || '').trim(),
+    restaurantId: new mongoose.Types.ObjectId(restaurant._id),
+    dishId: storedDishId,
+    dishName: storedDishName,
+    restaurantName: String(restaurant.restaurantName || '').trim(),
     meals,
     customerName,
     customerPhone: customerPhone || deliveryAddress.phone || '',
@@ -776,6 +766,64 @@ export async function listTodaySubscriptionMealsForRestaurant(
       order: schedule.orderId || null,
     })),
   };
+}
+
+export async function listTodaySubscriptionMealsAdmin(query = {}) {
+  const view = String(query.view || 'current').trim().toLowerCase();
+  const rawDate = String(query.date || '').trim();
+  const date = rawDate ? new Date(rawDate) : new Date();
+  const baseDate = Number.isNaN(date.getTime()) ? new Date() : date;
+  const todayBounds = getDayBounds(baseDate);
+  const tomorrowBounds = getDayBounds(addDays(baseDate, 1));
+  const rangeStart = getDayBounds(addDays(baseDate, -30)).start;
+  const rangeEnd = getDayBounds(addDays(baseDate, 30)).end;
+
+  let serviceDateFilter = { $gte: todayBounds.start, $lte: todayBounds.end };
+  let statusFilter = { $in: ['scheduled', 'sent_to_delivery'] };
+
+  if (view === 'all') {
+    serviceDateFilter = { $gte: todayBounds.start, $lte: rangeEnd };
+    statusFilter = { $in: ['scheduled', 'sent_to_delivery', 'skipped', 'cancelled'] };
+  } else if (view === 'scheduled') {
+    serviceDateFilter = { $gte: todayBounds.start, $lte: rangeEnd };
+    statusFilter = 'scheduled';
+  } else if (view === 'next') {
+    serviceDateFilter = { $gte: tomorrowBounds.start, $lte: tomorrowBounds.end };
+    statusFilter = { $in: ['scheduled', 'sent_to_delivery'] };
+  } else if (view === 'cancelled') {
+    serviceDateFilter = { $gte: rangeStart, $lte: rangeEnd };
+    statusFilter = { $in: ['cancelled', 'skipped'] };
+  }
+
+  const schedules = await FoodSubscriptionSchedule.find({
+    serviceDate: serviceDateFilter,
+    status: statusFilter,
+  })
+    .populate('subscriptionId', 'customerName customerPhone deliveryAddress planTitle')
+    .populate('userId', 'name phone email')
+    .populate('orderId', 'order_id orderStatus dispatch pricing')
+    .sort({ serviceDate: 1, mealName: 1, createdAt: 1 })
+    .lean();
+
+  return {
+    schedules: schedules.map((schedule) => ({
+      ...schedule,
+      scheduleId: schedule._id?.toString?.() || String(schedule._id),
+      subscription: schedule.subscriptionId || null,
+      user: schedule.userId || null,
+      order: schedule.orderId || null,
+    })),
+  };
+}
+export async function sendSubscriptionMealToDeliveryAdmin(scheduleId) {
+  if (!mongoose.isValidObjectId(scheduleId)) {
+    throw new ValidationError('Subscription schedule id is invalid');
+  }
+  const schedule = await FoodSubscriptionSchedule.findById(scheduleId).lean();
+  if (!schedule) throw new NotFoundError('Subscription meal not found');
+  if (!schedule.restaurantId) throw new ValidationError('No restaurant assigned to this schedule');
+  
+  return sendSubscriptionMealToDelivery(scheduleId, schedule.restaurantId);
 }
 
 export async function sendSubscriptionMealToDelivery(scheduleId, restaurantId) {
@@ -1802,7 +1850,7 @@ export async function cancelAddOnTiffin(userId, scheduleId, addOnId) {
   addon.status = 'refunded';
   await schedule.save();
 
-  return normalizeSubscriptionSchedule(schedule);
+  return schedule;
 }
 
 export async function customizeAddOnTiffin(userId, scheduleId, addOnId, selectionsDto) {
@@ -1850,7 +1898,7 @@ export async function customizeAddOnTiffin(userId, scheduleId, addOnId, selectio
   addon.selections = validatedSelections;
   await schedule.save();
 
-  return normalizeSubscriptionSchedule(schedule);
+  return schedule;
 }
 
 export async function addExtraTiffin(userId, scheduleId, dto) {
@@ -1869,18 +1917,38 @@ export async function addExtraTiffin(userId, scheduleId, dto) {
     throw new ValidationError('Cannot add extra tiffin for this meal');
   }
 
-  const dish = await FoodItem.findById(dto.dishId).lean();
+  const dishId = String(dto?.dishId || '').trim();
+  if (!mongoose.isValidObjectId(dishId)) {
+    throw new ValidationError('Dish ID is required for add-on');
+  }
+
+  const dish = await FoodItem.findById(dishId).lean();
   if (!dish) throw new NotFoundError('Dish not found');
 
   if (dish.price <= 0) {
     throw new ValidationError('Invalid dish price for extra tiffin');
   }
 
-  // Create razorpay order
+  const appSettings = await getAppCustomizationSettings();
+  const directTestMode = appSettings?.directPaymentTestMode === true || process.env.RAZORPAY_TEST_MODE === 'true';
+
+  if (directTestMode) {
+    return {
+      razorpay: {
+        key: process.env.RAZORPAY_KEY_ID || getRazorpayKeyId() || 'test_key',
+        amount: Math.round(Number(dish.price || 0) * 100),
+        currency: 'INR',
+        orderId: `test_addon_order_${schedule._id}_${Date.now()}`,
+        directTestMode: true,
+      },
+    };
+  }
+
+  const addonReceipt = `addon_${String(schedule._id).slice(-8)}_${Date.now()}`;
   const razorpayOrder = await createRazorpayOrder(
     dish.price * 100,
     'INR',
-    `addon_${schedule._id}_${Date.now()}`
+    addonReceipt
   );
 
   return {
@@ -1889,7 +1957,7 @@ export async function addExtraTiffin(userId, scheduleId, dto) {
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
       orderId: razorpayOrder.id,
-      directTestMode: process.env.RAZORPAY_TEST_MODE === 'true',
+      directTestMode: false,
     },
   };
 }
@@ -1936,6 +2004,6 @@ export async function verifyExtraTiffinPayment(userId, scheduleId, dto) {
 
   await schedule.save();
 
-  return normalizeSubscriptionSchedule(schedule);
+  return schedule;
 }
 

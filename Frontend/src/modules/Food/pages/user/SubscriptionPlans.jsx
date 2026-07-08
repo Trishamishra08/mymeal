@@ -42,10 +42,6 @@ export default function SubscriptionPlans() {
       id: stateDish.id || stateDish.itemId || searchParams.get("dishId") || "",
       itemId: stateDish.itemId || stateDish.id || searchParams.get("dishId") || "",
       name: stateDish.name || searchParams.get("dish") || "Selected meal",
-      restaurantName:
-        stateDish.restaurantName || searchParams.get("restaurant") || "",
-      restaurantId:
-        stateDish.restaurantId || searchParams.get("restaurantId") || "",
       categoryName: stateDish.categoryName || searchParams.get("category") || "",
       price: stateDish.price || searchParams.get("price") || "",
       image: stateDish.image || "",
@@ -215,11 +211,21 @@ export default function SubscriptionPlans() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    navigate("/food/user/checkout", {
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (dish.itemId || dish.id) params.set("dishId", dish.itemId || dish.id);
+                    if (dish.name) params.set("dish", dish.name);
+                    if (dish.categoryName) params.set("category", dish.categoryName);
+                    if (dish.price) params.set("price", String(dish.price));
+                    if (plan.id) params.set("planId", plan.id);
+
+                    navigate({
+                      pathname: "/food/user/checkout",
+                      search: params.toString() ? `?${params.toString()}` : "",
+                    }, {
                       state: { dish, selectedMeals, subscriptionPlan: plan },
-                    })
-                  }
+                    });
+                  }}
                   className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#e3282c] text-sm font-bold text-white transition active:bg-[#c42226]"
                 >
                   Continue

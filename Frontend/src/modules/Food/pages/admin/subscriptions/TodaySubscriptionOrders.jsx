@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { restaurantAPI, subscriptionAPI, orderAPI } from "@food/api";
+import { subscriptionAPI, orderAPI } from "@food/api";
 import { Card, CardContent } from "@food/components/ui/card";
 import { Button } from "@food/components/ui/button";
 import { Badge } from "@food/components/ui/badge";
@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@food/components/ui/dialog";
+import AssignDeliveryModal from "@food/components/admin/AssignDeliveryModal";
 
 export default function TodaySubscriptionOrders() {
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,7 @@ export default function TodaySubscriptionOrders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMeal, setSelectedMeal] = useState(null);
   const [menu, setMenu] = useState(null);
+  const [assignOrderId, setAssignOrderId] = useState(null);
 
   const loadMeals = async () => {
     setLoading(true);
@@ -48,8 +50,13 @@ export default function TodaySubscriptionOrders() {
 
   const handleManualAssign = async (meal) => {
     try {
-      await restaurantAPI.sendSubscriptionMealToDelivery(meal._id);
-      toast.success(`Assigned delivery for meal ID: ${meal._id}`);
+      const res = await subscriptionAPI.sendSubscriptionMealToDeliveryAdmin(meal._id);
+      const orderId = res.data?.data?.order?._id || res.data?.order?._id;
+      if (orderId) {
+        setAssignOrderId(orderId);
+      } else {
+        toast.error("Could not fetch the generated order ID");
+      }
       loadMeals();
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to assign delivery");
@@ -348,6 +355,15 @@ export default function TodaySubscriptionOrders() {
           )}
         </DialogContent>
       </Dialog>
+      <AssignDeliveryModal
+        orderId={assignOrderId}
+        isOpen={!!assignOrderId}
+        onClose={() => setAssignOrderId(null)}
+        onAssigned={() => {
+          setAssignOrderId(null);
+          loadMeals();
+        }}
+      />
     </AnimatedPage>
   );
 }

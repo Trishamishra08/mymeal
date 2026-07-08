@@ -262,6 +262,7 @@ router.post('/orders/:orderId/assign-delivery', orderController.assignDeliveryPa
 // ----- Subscriptions -----
 router.get('/subscriptions', subscriptionController.listSubscriptionsAdminController);
 router.get('/subscriptions/schedules/today', subscriptionController.listTodaySubscriptionMealsAdminController);
+router.post('/subscriptions/schedules/:scheduleId/send-to-delivery', subscriptionController.sendSubscriptionMealToDeliveryAdminController);
 router.get('/subscriptions/:subscriptionId', subscriptionController.getSubscriptionAdminController);
 
 // ----- App Customization -----
