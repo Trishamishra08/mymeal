@@ -1309,6 +1309,21 @@ export async function getDeliveryPartners(req, res, next) {
     }
 }
 
+export async function updateDeliveryBoySalary(req, res, next) {
+    try {
+        const { id } = req.params;
+        const { salary } = req.body;
+        const partner = await adminService.updateDeliveryBoySalary(id, Number(salary));
+        res.status(200).json({
+            success: true,
+            message: 'Delivery boy salary updated successfully',
+            data: partner
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
 export async function getDeliverymanReviews(req, res, next) {
     try {
         const data = await adminService.getDeliverymanReviews(req.query);

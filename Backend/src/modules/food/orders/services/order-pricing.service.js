@@ -4,7 +4,6 @@ import { FoodFeeSettings } from '../../admin/models/feeSettings.model.js';
 import { FoodOffer } from '../../admin/models/offer.model.js';
 import { FoodOfferUsage } from '../../admin/models/offerUsage.model.js';
 import { ValidationError } from '../../../../core/auth/errors.js';
-import { haversineKm } from './order.helpers.js';
 import { getSingleKitchenContext } from '../../shared/singleKitchen.service.js';
 
 export async function calculateOrderPricing(userId, dto) {
@@ -25,11 +24,6 @@ export async function calculateOrderPricing(userId, dto) {
     const qty = Number(it.quantity) || 1;
     let hasItemDiscount = false;
     
-    // The frontend already sends the discounted price in it.price.
-    // If we need to calculate itemDiscountTotal, we should rely on originalPrice sent by frontend,
-    // but since it's not sent, we skip re-applying the discount to avoid double discounting.
-    // In a future secure update, backend should fetch item prices from DB and apply discounts here.
-    
     subtotal += price * qty;
     if (!hasItemDiscount) {
       eligibleSubtotalForCoupon += price * qty;
@@ -41,93 +35,17 @@ export async function calculateOrderPricing(userId, dto) {
     .sort({ createdAt: -1 })
     .lean();
   const feeSettings = feeDoc || {
-    deliveryFee: 25,
-    deliveryFeeRanges: [],
-    freeDeliveryUpTo: 0,
-    platformFee: 5,
-    packagingFee: 0,
-    gstRate: 5,
+    singleOrderGst: 0,
+    singleOrderDeliveryFee: 0
   };
 
-  const packagingFee = feeSettings.packagingFee != null ? Number(feeSettings.packagingFee) : 0;
-  const platformFee = feeSettings.platformFee != null ? Number(feeSettings.platformFee) : 0;
-
-  const freeUpTo = Number(feeSettings.freeDeliveryUpTo || 0);
-  let distanceKm = null;
-  if (
-    restaurant?.location?.coordinates?.length === 2 &&
-    dto?.deliveryAddress?.location?.coordinates?.length === 2
-  ) {
-    const [rLng, rLat] = restaurant.location.coordinates;
-    const [dLng, dLat] = dto.deliveryAddress.location.coordinates;
-    const d = haversineKm(rLat, rLng, dLat, dLng);
-    distanceKm = Number.isFinite(d) ? d : null;
-  }
-  let deliveryFee = 0;
-  let deliveryFeeBreakdown = null;
-  if (
-    Number.isFinite(freeUpTo) &&
-    freeUpTo > 0 &&
-    subtotal >= freeUpTo
-  ) {
-    deliveryFee = 0;
-  } else {
-    const ranges = Array.isArray(feeSettings.deliveryFeeRanges)
-      ? [...feeSettings.deliveryFeeRanges]
-      : [];
-    if (ranges.length > 0) {
-      ranges.sort((a, b) => Number(a.min) - Number(b.min));
-      let matched = null;
-      for (let i = 0; i < ranges.length; i += 1) {
-        const r = ranges[i] || {};
-        const min = Number(r.min);
-        const max = Number(r.max);
-        const fee = Number(r.fee);
-        if (
-          !Number.isFinite(min) ||
-          !Number.isFinite(max) ||
-          !Number.isFinite(fee)
-        ) {
-          continue;
-        }
-        const isLast = i === ranges.length - 1;
-        if (!Number.isFinite(distanceKm)) {
-          continue;
-        }
-        const inRange = isLast
-          ? distanceKm >= min && distanceKm <= max
-          : distanceKm >= min && distanceKm < max;
-        if (inRange) {
-          matched = fee;
-          if (Number.isFinite(distanceKm)) {
-            deliveryFeeBreakdown = {
-              source: "distance",
-              distanceKm,
-              minKm: min,
-              maxKm: max,
-              fee,
-            };
-          }
-          break;
-        }
-      }
-      deliveryFee = Number.isFinite(matched)
-        ? matched
-        : Number(feeSettings.deliveryFee || 0);
-    } else {
-      deliveryFee = Number(feeSettings.deliveryFee || 0);
-    }
-  }
-
-  const gstRate = feeSettings.gstRate != null ? Number(feeSettings.gstRate) : 0;
-  const gstOnDeliveryFee = feeSettings.gstOnDeliveryFee != null ? Number(feeSettings.gstOnDeliveryFee) : 0;
-  const gstOnPlatformFee = feeSettings.gstOnPlatformFee != null ? Number(feeSettings.gstOnPlatformFee) : 0;
-  const gstOnPackagingFee = feeSettings.gstOnPackagingFee != null ? Number(feeSettings.gstOnPackagingFee) : 0;
+  const deliveryFee = feeSettings.singleOrderDeliveryFee != null ? Number(feeSettings.singleOrderDeliveryFee) : 0;
+  const gstRate = feeSettings.singleOrderGst != null ? Number(feeSettings.singleOrderGst) : 0;
 
   const itemTax = (Number.isFinite(gstRate) && gstRate > 0) ? (subtotal * (gstRate / 100)) : 0;
-  const deliveryTax = (Number.isFinite(gstOnDeliveryFee) && gstOnDeliveryFee > 0) ? (deliveryFee * (gstOnDeliveryFee / 100)) : 0;
-  const platformTax = (Number.isFinite(gstOnPlatformFee) && gstOnPlatformFee > 0) ? (platformFee * (gstOnPlatformFee / 100)) : 0;
-  const packagingTax = (Number.isFinite(gstOnPackagingFee) && gstOnPackagingFee > 0) ? (packagingFee * (gstOnPackagingFee / 100)) : 0;
+  const deliveryTax = 0;
+  const platformTax = 0;
+  const packagingTax = 0;
 
   const tax = Math.round(itemTax + deliveryTax + platformTax + packagingTax);
 
@@ -246,7 +164,7 @@ export async function calculateOrderPricing(userId, dto) {
 
   const couponDiscount = discount;
   const totalDiscount = couponDiscount;
-  const totalBeforeDiscount = subtotal + deliveryFee + tax + platformFee + packagingFee;
+  const totalBeforeDiscount = subtotal + deliveryFee + tax;
   const total = Math.max(0, totalBeforeDiscount - totalDiscount);
 
   return {
@@ -259,11 +177,11 @@ export async function calculateOrderPricing(userId, dto) {
         platformTax,
         packagingTax
       },
-      packagingFee,
+      packagingFee: 0,
       deliveryFee,
-      deliveryFeeBreakdown: deliveryFeeBreakdown || undefined,
-      freeDeliveryUpTo: Number.isFinite(freeUpTo) ? freeUpTo : undefined,
-      platformFee,
+      deliveryFeeBreakdown: undefined,
+      freeDeliveryUpTo: undefined,
+      platformFee: 0,
       discount: totalDiscount,
       itemDiscount: itemDiscountTotal > 0 ? itemDiscountTotal : undefined,
       couponDiscount: couponDiscount > 0 ? couponDiscount : undefined,
@@ -275,4 +193,3 @@ export async function calculateOrderPricing(userId, dto) {
     },
   };
 }
-

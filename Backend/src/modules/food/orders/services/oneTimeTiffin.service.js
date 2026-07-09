@@ -129,18 +129,16 @@ async function buildFallbackMenu() {
 }
 
 async function buildMenu(dateKey) {
-  const dailyMenu = await MyMealDailyMenu.findOne({ menuDate: dateKey }).lean()
-    || await MyMealDailyMenu.findOne({}).sort({ menuDate: -1, createdAt: -1 }).lean();
+  const dailyMenu = await MyMealDailyMenu.findOne({ menuDate: dateKey }).lean();
 
   let rows = [];
   if (dailyMenu?.snapshot?.length) {
     rows = dailyMenu.snapshot.map(normalizeSnapshotRow).filter((row) => row.defaultItem);
-  } else {
-    rows = await buildFallbackMenu();
   }
 
   if (!rows.length) {
-    throw new ValidationError('Daily menu is not configured yet');
+    // Return empty array if today's menu is not set, frontend will handle this
+    return [];
   }
 
   const categoryIds = rows.map((row) => row.categoryId).filter(mongoose.Types.ObjectId.isValid);
@@ -175,8 +173,8 @@ export async function getOneTimeTiffinMenu(query = {}) {
   const [feeSettings, rows] = await Promise.all([getActiveFeeSettings(), buildMenu(menuDate)]);
   return {
     menuDate,
-    price: Number(feeSettings?.oneTimeTiffinPrice || 0),
-    deliveryFee: Number(feeSettings?.deliveryFee || 0),
+    price: Number(feeSettings?.singleOrderTiffinAmount || 0),
+    deliveryFee: Number(feeSettings?.singleOrderDeliveryFee || 0),
     currency: 'INR',
     categories: rows,
   };
@@ -228,7 +226,7 @@ export async function createOneTimeTiffinOrder(userId, dto = {}) {
     getActiveFeeSettings(),
     FoodRestaurant.findOne({}).lean()
   ]);
-  const unitPrice = Number(feeSettings?.oneTimeTiffinPrice || 0);
+  const unitPrice = Number(feeSettings?.singleOrderTiffinAmount || 0);
   if (!unitPrice || unitPrice <= 0) {
     throw new ValidationError('One-time tiffin price is not configured');
   }
@@ -240,24 +238,12 @@ export async function createOneTimeTiffinOrder(userId, dto = {}) {
   const deliveryAddress = sanitizeAddress(dto.address || dto.deliveryAddress || {}, user);
   const subtotal = unitPrice * quantity;
 
-  let deliveryFee = Number(feeSettings?.deliveryFee || 0);
-  const freeUpTo = Number(feeSettings?.freeDeliveryUpTo || 0);
-  const freeThreshold = Number(feeSettings?.freeDeliveryThreshold || 149);
+  const deliveryFee = Number(feeSettings?.singleOrderDeliveryFee || 0);
+  const platformFee = 0;
+  const packagingFee = 0;
 
-  if (Number.isFinite(freeUpTo) && freeUpTo > 0 && subtotal >= freeUpTo) {
-    deliveryFee = 0;
-  } else if (subtotal >= freeThreshold) {
-    deliveryFee = 0;
-  }
-
-  const platformFee = Number(feeSettings?.platformFee || 0);
-  const packagingFee = Number(feeSettings?.packagingFee || 0);
-
-  const gstOnItemTotal = subtotal * (Number(feeSettings?.gstRate || 0) / 100);
-  const gstOnDeliveryFee = deliveryFee * (Number(feeSettings?.gstOnDeliveryFee || 0) / 100);
-  const gstOnPlatformFee = platformFee * (Number(feeSettings?.gstOnPlatformFee || 0) / 100);
-  const gstOnPackagingFee = packagingFee * (Number(feeSettings?.gstOnPackagingFee || 0) / 100);
-  const tax = Math.round(gstOnItemTotal + gstOnDeliveryFee + gstOnPlatformFee + gstOnPackagingFee);
+  const gstRate = Number(feeSettings?.singleOrderGst || 0);
+  const tax = Math.round(subtotal * (gstRate / 100));
 
   let discount = 0;
   let appliedCoupon = null;

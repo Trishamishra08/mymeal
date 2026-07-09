@@ -278,6 +278,9 @@ export default function SubscriptionDetails() {
                    
                    {!isEditingItems && (
                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-4 flex flex-col gap-1 mt-3">
+                       {(!menu?.categories || menu.categories.length === 0) && (
+                         <div className="text-[13px] text-gray-500 italic py-2">Today's menu is not available yet.</div>
+                       )}
                        {(menu?.categories || []).map((cat) => {
                          const selectedItemId = selections[cat.categoryId] || cat.defaultItem?.itemId;
                          const item = cat.items?.find((i) => i.itemId === selectedItemId) || cat.defaultItem;
@@ -294,6 +297,9 @@ export default function SubscriptionDetails() {
 
                    {isEditingItems && (
                      <div className="mb-4 mt-3 space-y-3">
+                       {(!menu?.categories || menu.categories.length === 0) && (
+                         <div className="text-[13px] text-gray-500 italic py-2">Today's menu is not available yet.</div>
+                       )}
                        {(menu?.categories || []).map((category) => {
                          const selectedItemId = selections[category.categoryId] || category.defaultItem?.itemId;
                          const selectedItem = category.items?.find((item) => item.itemId === selectedItemId) || category.defaultItem;
