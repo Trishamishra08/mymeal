@@ -38,18 +38,16 @@ export default function TodayDefaultTiffin() {
     };
   }, []);
 
-  if (loading || !menu || !menu.categories || menu.categories.length === 0) {
-    return null; // Do not show if loading or empty
+  if (loading || !menu) {
+    return null; // Do not show if loading
   }
 
-  const defaultItems = menu.categories.map((cat) => {
+  const defaultItems = (menu.categories || []).map((cat) => {
     return {
       categoryName: cat.categoryName,
       ...cat.defaultItem
     };
   }).filter(item => item && item.itemId);
-
-  if (defaultItems.length === 0) return null;
 
   // Helpers for category colors
   const getCategoryColor = (name) => {
@@ -116,6 +114,17 @@ export default function TodayDefaultTiffin() {
 
         </div>
 
+        {defaultItems.length === 0 ? (
+          <div className="w-full bg-gray-50 dark:bg-[#1a1a1a] rounded-2xl border border-gray-100 dark:border-gray-800 p-8 text-center flex flex-col items-center justify-center">
+            <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-full mb-3">
+              <Star className="h-6 w-6 text-gray-400" />
+            </div>
+            <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">Menu Not Available</h3>
+            <p className="text-sm text-gray-500 max-w-sm">
+              Today's menu has not been set yet. Please check back a bit later!
+            </p>
+          </div>
+        ) : (
         <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory hide-scrollbar pl-1">
         {defaultItems.map((item, index) => (
           <div
@@ -158,6 +167,7 @@ export default function TodayDefaultTiffin() {
           </div>
         ))}
       </div>
+      )}
       <style dangerouslySetInnerHTML={{ __html: `
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
