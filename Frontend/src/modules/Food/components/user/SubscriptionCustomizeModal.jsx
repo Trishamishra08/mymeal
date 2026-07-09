@@ -197,7 +197,7 @@ export default function SubscriptionCustomizeModal({
               variant="outline"
               className="flex h-16 w-full items-center justify-start justify-between rounded-xl border-gray-200 px-4 hover:border-red-600 hover:bg-red-50 dark:border-gray-800 dark:hover:bg-red-900/20"
               onClick={handleSkip}
-              disabled={!schedule.canChangeDish || loading}
+              disabled={!schedule.canSkip || loading}
             >
               <div className="flex items-center gap-3 text-left">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">

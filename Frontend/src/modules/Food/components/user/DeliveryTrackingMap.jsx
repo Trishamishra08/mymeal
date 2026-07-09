@@ -163,8 +163,9 @@ const DeliveryTrackingMap = ({
       }
       if (data?.eta) {
         debugLog('⏱️ Received real-time ETA:', data.eta);
-        setCurrentEta(data.eta);
-        if (onEtaUpdate) onEtaUpdate(data.eta);
+        const formattedEta = typeof data.eta === 'number' || !isNaN(Number(data.eta)) ? `${data.eta} min` : data.eta;
+        setCurrentEta(formattedEta);
+        if (onEtaUpdate) onEtaUpdate(formattedEta);
       }
     }));
 
@@ -319,6 +320,12 @@ const DeliveryTrackingMap = ({
       travelMode: 'DRIVING'
     };
   }, [restaurantCoords?.lat, restaurantCoords?.lng, customerCoords?.lat, customerCoords?.lng, cloudPolyline]);
+
+  useEffect(() => {
+    if (baselineDirectionsOptions) {
+      baselineRequestedRef.current = false;
+    }
+  }, [baselineDirectionsOptions]);
 
   /**
    * SPLIT POLYLINE LOGIC:

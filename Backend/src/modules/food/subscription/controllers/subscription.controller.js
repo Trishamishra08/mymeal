@@ -128,3 +128,13 @@ export async function sendSubscriptionMealToDeliveryAdminController(req, res, ne
     next(err);
   }
 }
+
+export async function updateSubscriptionScheduleStatusAdminController(req, res, next) {
+  try {
+    const { status } = req.body;
+    const result = await subscriptionService.updateSubscriptionScheduleStatusAdmin(req.params.scheduleId, status);
+    return sendResponse(res, 200, 'Subscription schedule status updated', result);
+  } catch (err) {
+    next(err);
+  }
+}

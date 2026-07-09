@@ -3,6 +3,7 @@ import { FoodOrder, FoodSettings } from '../models/order.model.js';
 // import { paymentSnapshotFromOrder } from './foodOrderPayment.service.js';
 import { logger } from '../../../../utils/logger.js';
 import { FoodUser } from '../../../../core/users/user.model.js';
+import { syncSubscriptionOrderStatus } from "../../subscription/services/subscription.service.js";
 
 import { FoodDeliveryPartner } from '../../delivery/models/deliveryPartner.model.js';
 import { FoodZone } from '../../admin/models/zone.model.js';
@@ -1146,6 +1147,10 @@ export async function updateOrderStatusAdmin(
     note: note || ""
   });
   await order.save();
+  
+  // Sync to subscription schedule if applicable
+  await syncSubscriptionOrderStatus(order);
+  
   return _triggerStatusUpdateSideEffects(order, from, orderStatus, adminId);
 }
 

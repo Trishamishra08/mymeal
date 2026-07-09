@@ -102,7 +102,7 @@ function normalizeSubscription(subscription, schedules = []) {
     paymentStatus: subscription.paymentStatus || '',
     startDate: subscription.startDate || null,
     endDate: subscription.endDate || null,
-    remainingDays,
+    remainingDays: subscription.remainingMeals !== undefined ? subscription.remainingMeals : remainingDays,
     schedules,
     createdAt: subscription.createdAt || null,
   };
@@ -306,8 +306,18 @@ export async function listSubscriptionsForUser(userId) {
   const subscriptions = await FoodSubscription.find({ userId: new mongoose.Types.ObjectId(userId) })
     .sort({ createdAt: -1 })
     .lean();
+    
+  const enhancedSubscriptions = await Promise.all(subscriptions.map(async (sub) => {
+    const remainingMeals = await FoodSubscriptionSchedule.countDocuments({
+      subscriptionId: sub._id,
+      isSkipped: false,
+      fulfillmentStatus: { $in: ['pending', 'ready_for_assignment'] }
+    });
+    return { ...sub, remainingMeals };
+  }));
+
   return {
-    subscriptions: subscriptions.map((subscription) => normalizeSubscription(subscription)),
+    subscriptions: enhancedSubscriptions.map((subscription) => normalizeSubscription(subscription)),
   };
 }
 
@@ -321,6 +331,13 @@ export async function getCurrentSubscriptionForUser(userId) {
   if (!subscription) {
     return { subscription: null, today: null };
   }
+
+  const remainingMeals = await FoodSubscriptionSchedule.countDocuments({
+    subscriptionId: subscription._id,
+    isSkipped: false,
+    fulfillmentStatus: { $in: ['pending', 'ready_for_assignment'] }
+  });
+  subscription.remainingMeals = remainingMeals;
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -348,10 +365,43 @@ export async function listUpcomingSchedulesForUser(userId) {
     userId: new mongoose.Types.ObjectId(userId),
     serviceDate: { $gte: start, $lte: end },
   })
+    .populate('subscriptionId')
     .sort({ serviceDate: 1 })
     .lean();
 
-  return { schedules };
+  const now = new Date();
+  const enhancedSchedules = schedules.map(schedule => {
+    const sub = schedule.subscriptionId || {};
+    const plan = sub.planSnapshot || {};
+    
+    let canChangeDish = plan.enableMealCustomization !== false;
+    if (canChangeDish && plan.customizationCutoffTime) {
+      const cutoff = parseCutoffDate(schedule.serviceDate, plan.customizationCutoffTime);
+      if (cutoff && now > cutoff) canChangeDish = false;
+    }
+    
+    let canChangeAddress = plan.enableAddressChange !== false;
+    if (canChangeAddress && plan.addressChangeCutoffTime) {
+      const cutoff = parseCutoffDate(schedule.serviceDate, plan.addressChangeCutoffTime);
+      if (cutoff && now > cutoff) canChangeAddress = false;
+    }
+    
+    let canSkip = plan.enableSkipDelivery !== false;
+    if (canSkip && plan.customizationCutoffTime) {
+      const cutoff = parseCutoffDate(schedule.serviceDate, plan.customizationCutoffTime);
+      if (cutoff && now > cutoff) canSkip = false;
+    }
+
+    return {
+      ...schedule,
+      subscriptionId: sub._id,
+      canChangeDish,
+      canChangeAddress,
+      canSkip
+    };
+  });
+
+  return { schedules: enhancedSchedules };
 }
 
 export async function changeSubscriptionAddress(userId, subscriptionId, dto = {}) {
@@ -460,6 +510,47 @@ export async function skipSubscriptionSchedule(userId, scheduleId, dto = {}) {
   });
   await schedule.save();
 
+  // Find the last schedule to append a new one
+  const lastSchedule = await FoodSubscriptionSchedule.findOne({ subscriptionId: schedule.subscriptionId })
+    .sort({ serviceDate: -1 })
+    .lean();
+  
+  if (lastSchedule && lastSchedule.serviceDate) {
+    const nextDate = new Date(lastSchedule.serviceDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+    
+    // Create new schedule
+    await FoodSubscriptionSchedule.create({
+      subscriptionId: subscription._id,
+      userId: subscription.userId,
+      planId: subscription.planId,
+      serviceDate: nextDate,
+      mealType: subscription.planSnapshot?.mealType || '',
+      deliveryAddress: subscription.deliveryAddress,
+      mealSelections: {},
+      fulfillmentStatus: 'pending',
+      auditLogs: [
+        {
+          action: 'schedule_created',
+          byRole: 'SYSTEM',
+          byId: '',
+          note: 'Schedule created due to skip action',
+          createdAt: new Date(),
+        },
+      ],
+    });
+
+    // Extend subscription endDate by 1 day
+    if (subscription.endDate) {
+      const newEndDate = new Date(subscription.endDate);
+      newEndDate.setDate(newEndDate.getDate() + 1);
+      await FoodSubscription.updateOne(
+        { _id: subscription._id },
+        { $set: { endDate: newEndDate } }
+      );
+    }
+  }
+
   return { schedule };
 }
 
@@ -508,7 +599,7 @@ export async function listTodaySubscriptionMealsAdmin(query = {}) {
   const orders = await FoodOrder.find({
     'subscriptionUsage.subscriptionId': { $in: subscriptionIds },
     createdAt: { $gte: start, $lte: end }
-  }).lean();
+  }).populate('dispatch.deliveryPartnerId', 'name phone').lean();
 
   const orderMap = {};
   for (const order of orders) {
@@ -520,6 +611,89 @@ export async function listTodaySubscriptionMealsAdmin(query = {}) {
   }
 
   return { schedules };
+}
+
+export async function updateSubscriptionScheduleStatusAdmin(scheduleId, status) {
+  const schedule = await FoodSubscriptionSchedule.findById(scheduleId);
+  if (!schedule) {
+    throw new CustomError('Subscription schedule not found', 404);
+  }
+
+  const validStatuses = ['pending', 'ready_for_assignment', 'assigned', 'accepted', 'picked_up', 'on_the_way', 'delivered', 'cancelled', 'skipped'];
+  if (!validStatuses.includes(status)) {
+    throw new CustomError('Invalid status', 400);
+  }
+
+  schedule.fulfillmentStatus = status;
+  
+  if (status === 'delivered') {
+    schedule.deliveredAt = new Date();
+  }
+
+  schedule.auditLogs.push({
+    action: `Status updated to ${status}`,
+    byRole: 'admin',
+    note: 'Manual status update by admin',
+    createdAt: new Date()
+  });
+
+  await schedule.save();
+  return schedule;
+}
+
+export async function syncSubscriptionOrderStatus(order) {
+  if (order.orderType === 'subscription' && order.subscriptionUsage && order.subscriptionUsage.planTitle) {
+    const scheduleId = order.subscriptionUsage.planTitle;
+    let status = order.orderStatus;
+    
+    // Map orderStatus to fulfillmentStatus
+    const statusMap = {
+      'created': 'pending',
+      'pending': 'pending',
+      'confirmed': 'accepted',
+      'preparing': 'preparing', // though not in enum, we mapped to accepted if needed, wait, enum has 'accepted'. 
+      // wait, the valid ones are: pending, ready_for_assignment, assigned, accepted, picked_up, on_the_way, delivered, cancelled, skipped
+      'ready_for_pickup': 'picked_up',
+      'picked_up': 'picked_up',
+      'food_on_the_way': 'on_the_way',
+      'delivered': 'delivered',
+      'cancelled_by_restaurant': 'cancelled',
+      'cancelled_by_user': 'cancelled',
+      'cancelled_by_admin': 'cancelled'
+    };
+
+    if (status === 'preparing') status = 'accepted'; // fallback if not in enum
+    if (status === 'out_for_delivery' || status === 'food_on_the_way') status = 'on_the_way';
+    
+    let targetStatus = statusMap[status] || status;
+
+    // Check if targetStatus is valid
+    const validStatuses = ['pending', 'ready_for_assignment', 'assigned', 'accepted', 'picked_up', 'on_the_way', 'delivered', 'cancelled', 'skipped'];
+    if (!validStatuses.includes(targetStatus)) {
+       // fallback mapping just in case
+       if (status === 'out_for_delivery') targetStatus = 'on_the_way';
+       else targetStatus = 'accepted'; 
+    }
+
+    try {
+      const schedule = await FoodSubscriptionSchedule.findById(scheduleId);
+      if (schedule && schedule.fulfillmentStatus !== targetStatus) {
+        schedule.fulfillmentStatus = targetStatus;
+        if (targetStatus === 'delivered') schedule.deliveredAt = new Date();
+        
+        schedule.auditLogs.push({
+          action: `Auto sync to ${targetStatus}`,
+          byRole: 'system',
+          note: `Synced from order status ${order.orderStatus}`,
+          createdAt: new Date()
+        });
+        
+        await schedule.save();
+      }
+    } catch (err) {
+      console.error('[syncSubscriptionOrderStatus] Failed to sync status:', err);
+    }
+  }
 }
 
 export async function sendSubscriptionMealToDeliveryAdmin(scheduleId) {

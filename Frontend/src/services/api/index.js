@@ -314,6 +314,10 @@ export const adminAPI = {
       params,
       contextModule: "admin",
     }),
+  updateDeliveryBoySalary: (id, salary) =>
+    apiClient.patch(`/food/admin/delivery/partners/${id}/salary`, { salary }, {
+      contextModule: "admin",
+    }),
   getAvailableDeliveryPartners: () =>
     apiClient.get("/food/admin/delivery/available-partners", {
       contextModule: "admin",
@@ -2654,6 +2658,8 @@ export const subscriptionAPI = {
       {},
       { contextModule: "admin" },
     ),
+  updateSubscriptionScheduleStatusAdmin: (scheduleId, status) =>
+    apiClient.patch(`/food/admin/subscriptions/schedules/${String(scheduleId)}/status`, { status }, { contextModule: "admin" }),
 };
 
 // Dining bookings now handled by backend

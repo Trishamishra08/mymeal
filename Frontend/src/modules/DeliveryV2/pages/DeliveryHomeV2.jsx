@@ -251,7 +251,7 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
     } else {
       simInitializedRef.current = false;
     }
-  }, [tripStatus, isSimMode, activeOrder?._id]);
+  }, [tripStatus, isSimMode, activeOrder?._id, simPath]);
 
   // Ensure simulation starts from the first route point once route is ready.
   useEffect(() => {

@@ -46,6 +46,12 @@ import {
     serializeFoodVariants
 } from './foodVariant.service.js';
 
+// Dummy models to prevent ReferenceErrors for legacy or removed features
+const FoodRestaurant = mongoose.models.FoodRestaurant || mongoose.model('FoodRestaurant', new mongoose.Schema({}, { strict: false }));
+const FoodAddon = mongoose.models.FoodAddon || mongoose.model('FoodAddon', new mongoose.Schema({}, { strict: false }));
+const FoodRestaurantWithdrawal = mongoose.models.FoodRestaurantWithdrawal || mongoose.model('FoodRestaurantWithdrawal', new mongoose.Schema({}, { strict: false }));
+const FoodRestaurantSupportTicket = mongoose.models.FoodRestaurantSupportTicket || mongoose.model('FoodRestaurantSupportTicket', new mongoose.Schema({}, { strict: false }));
+
 const parseBooleanLike = (value, fieldName) => {
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') {
@@ -1874,43 +1880,23 @@ export async function upsertFeeSettings(body) {
         const $set = {};
         const $unset = {};
 
-        if (body.deliveryFee === null) $unset.deliveryFee = 1;
-        else if (body.deliveryFee !== undefined) $set.deliveryFee = body.deliveryFee;
+        if (body.singleOrderTiffinAmount === null) $unset.singleOrderTiffinAmount = 1;
+        else if (body.singleOrderTiffinAmount !== undefined) $set.singleOrderTiffinAmount = body.singleOrderTiffinAmount;
 
-        if (body.deliveryFeeRanges !== undefined) $set.deliveryFeeRanges = body.deliveryFeeRanges;
+        if (body.singleOrderGst === null) $unset.singleOrderGst = 1;
+        else if (body.singleOrderGst !== undefined) $set.singleOrderGst = body.singleOrderGst;
 
-        if (body.freeDeliveryUpTo === null) $unset.freeDeliveryUpTo = 1;
-        else if (body.freeDeliveryUpTo !== undefined) $set.freeDeliveryUpTo = body.freeDeliveryUpTo;
+        if (body.singleOrderDeliveryFee === null) $unset.singleOrderDeliveryFee = 1;
+        else if (body.singleOrderDeliveryFee !== undefined) $set.singleOrderDeliveryFee = body.singleOrderDeliveryFee;
 
-        if (body.freeDeliveryThreshold === null) $unset.freeDeliveryThreshold = 1;
-        else if (body.freeDeliveryThreshold !== undefined) $set.freeDeliveryThreshold = body.freeDeliveryThreshold;
+        if (body.subscriptionDeliveryFee === null) $unset.subscriptionDeliveryFee = 1;
+        else if (body.subscriptionDeliveryFee !== undefined) $set.subscriptionDeliveryFee = body.subscriptionDeliveryFee;
 
-        if (body.platformFee === null) $unset.platformFee = 1;
-        else if (body.platformFee !== undefined) $set.platformFee = body.platformFee;
+        if (body.subscriptionGst === null) $unset.subscriptionGst = 1;
+        else if (body.subscriptionGst !== undefined) $set.subscriptionGst = body.subscriptionGst;
 
-        if (body.packagingFee === null) $unset.packagingFee = 1;
-        else if (body.packagingFee !== undefined) $set.packagingFee = body.packagingFee;
-
-        if (body.gstRate === null) $unset.gstRate = 1;
-        else if (body.gstRate !== undefined) $set.gstRate = body.gstRate;
-
-        if (body.gstOnDeliveryFee === null) $unset.gstOnDeliveryFee = 1;
-        else if (body.gstOnDeliveryFee !== undefined) $set.gstOnDeliveryFee = body.gstOnDeliveryFee;
-
-        if (body.gstOnPlatformFee === null) $unset.gstOnPlatformFee = 1;
-        else if (body.gstOnPlatformFee !== undefined) $set.gstOnPlatformFee = body.gstOnPlatformFee;
-
-        if (body.gstOnPackagingFee === null) $unset.gstOnPackagingFee = 1;
-        else if (body.gstOnPackagingFee !== undefined) $set.gstOnPackagingFee = body.gstOnPackagingFee;
-
-        if (body.deliveryBonusAmount === null) $unset.deliveryBonusAmount = 1;
-        else if (body.deliveryBonusAmount !== undefined) $set.deliveryBonusAmount = body.deliveryBonusAmount;
-
-        if (body.oneTimeTiffinPrice === null) $unset.oneTimeTiffinPrice = 1;
-        else if (body.oneTimeTiffinPrice !== undefined) $set.oneTimeTiffinPrice = body.oneTimeTiffinPrice;
-
-        if (body.dispatchRadiusTiers === null) $unset.dispatchRadiusTiers = 1;
-        else if (body.dispatchRadiusTiers !== undefined) $set.dispatchRadiusTiers = body.dispatchRadiusTiers;
+        if (body.subscriptionAddonTiffinCharge === null) $unset.subscriptionAddonTiffinCharge = 1;
+        else if (body.subscriptionAddonTiffinCharge !== undefined) $set.subscriptionAddonTiffinCharge = body.subscriptionAddonTiffinCharge;
 
         if (body.isActive !== undefined) $set.isActive = body.isActive;
 
@@ -1924,21 +1910,14 @@ export async function upsertFeeSettings(body) {
     }
 
     const payload = {
-        deliveryFeeRanges: body.deliveryFeeRanges ?? [],
         isActive: body.isActive !== false
     };
-    if (body.deliveryFee !== undefined && body.deliveryFee !== null) payload.deliveryFee = body.deliveryFee;
-    if (body.freeDeliveryUpTo !== undefined && body.freeDeliveryUpTo !== null) payload.freeDeliveryUpTo = body.freeDeliveryUpTo;
-    if (body.freeDeliveryThreshold !== undefined && body.freeDeliveryThreshold !== null) payload.freeDeliveryThreshold = body.freeDeliveryThreshold;
-    if (body.platformFee !== undefined && body.platformFee !== null) payload.platformFee = body.platformFee;
-    if (body.packagingFee !== undefined && body.packagingFee !== null) payload.packagingFee = body.packagingFee;
-    if (body.gstRate !== undefined && body.gstRate !== null) payload.gstRate = body.gstRate;
-    if (body.gstOnDeliveryFee !== undefined && body.gstOnDeliveryFee !== null) payload.gstOnDeliveryFee = body.gstOnDeliveryFee;
-    if (body.gstOnPlatformFee !== undefined && body.gstOnPlatformFee !== null) payload.gstOnPlatformFee = body.gstOnPlatformFee;
-    if (body.gstOnPackagingFee !== undefined && body.gstOnPackagingFee !== null) payload.gstOnPackagingFee = body.gstOnPackagingFee;
-    if (body.deliveryBonusAmount !== undefined && body.deliveryBonusAmount !== null) payload.deliveryBonusAmount = body.deliveryBonusAmount;
-    if (body.oneTimeTiffinPrice !== undefined && body.oneTimeTiffinPrice !== null) payload.oneTimeTiffinPrice = body.oneTimeTiffinPrice;
-    if (body.dispatchRadiusTiers !== undefined && body.dispatchRadiusTiers !== null) payload.dispatchRadiusTiers = body.dispatchRadiusTiers;
+    if (body.singleOrderTiffinAmount !== undefined && body.singleOrderTiffinAmount !== null) payload.singleOrderTiffinAmount = body.singleOrderTiffinAmount;
+    if (body.singleOrderGst !== undefined && body.singleOrderGst !== null) payload.singleOrderGst = body.singleOrderGst;
+    if (body.singleOrderDeliveryFee !== undefined && body.singleOrderDeliveryFee !== null) payload.singleOrderDeliveryFee = body.singleOrderDeliveryFee;
+    if (body.subscriptionDeliveryFee !== undefined && body.subscriptionDeliveryFee !== null) payload.subscriptionDeliveryFee = body.subscriptionDeliveryFee;
+    if (body.subscriptionGst !== undefined && body.subscriptionGst !== null) payload.subscriptionGst = body.subscriptionGst;
+    if (body.subscriptionAddonTiffinCharge !== undefined && body.subscriptionAddonTiffinCharge !== null) payload.subscriptionAddonTiffinCharge = body.subscriptionAddonTiffinCharge;
 
     const created = await FoodFeeSettings.create(payload);
     return created.toObject();
@@ -3932,6 +3911,7 @@ export async function getDeliveryPartners(query) {
         zone: doc.city || doc.state || doc.address || '',
         vehicleType: doc.vehicleType || '',
         status: doc.status,
+        baseSalary: doc.baseSalary || 0,
         totalOrders: countsMap.get(String(doc._id)) || 0,
         profilePhoto: doc.profilePhoto || null,
         profileImage: doc.profilePhoto ? { url: doc.profilePhoto } : null
@@ -3946,6 +3926,21 @@ export async function getDeliveryPartners(query) {
             pages: Math.ceil(total / limitNum) || 1
         }
     };
+}
+
+export async function updateDeliveryBoySalary(id, salary) {
+    if (!id || typeof salary !== 'number') {
+        throw new Error('Valid partner ID and salary are required');
+    }
+    const partner = await FoodDeliveryPartner.findByIdAndUpdate(
+        id,
+        { baseSalary: salary },
+        { new: true }
+    );
+    if (!partner) {
+        throw new Error('Delivery partner not found');
+    }
+    return partner;
 }
 
 // ----- Delivery partner bonus (admin) -----
