@@ -63,6 +63,8 @@ export default function TodaySubscriptionOrders() {
     }
   };
 
+
+
   const filteredMeals = meals.filter(
     (meal) =>
       meal.dishName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -337,10 +339,13 @@ export default function TodaySubscriptionOrders() {
                     <span className="text-gray-500">Service Date:</span>
                     <span className="font-medium">{format(new Date(selectedMeal.serviceDate), "dd MMM, yyyy")}</span>
                   </div>
-                  {selectedMeal.deliveryBoyId && (
+                  {selectedMeal.order?.dispatch?.deliveryPartnerId && (
                     <div className="flex justify-between">
                       <span className="text-gray-500">Delivery Boy:</span>
-                      <span className="font-medium text-[#55254b]">{selectedMeal.deliveryBoyId?.name || "Assigned"}</span>
+                      <span className="font-medium text-[#55254b]">
+                        {selectedMeal.order.dispatch.deliveryPartnerId.name} 
+                        {selectedMeal.order.dispatch.deliveryPartnerId.phone && ` (${selectedMeal.order.dispatch.deliveryPartnerId.phone})`}
+                      </span>
                     </div>
                   )}
                   {selectedMeal.sentAt && (

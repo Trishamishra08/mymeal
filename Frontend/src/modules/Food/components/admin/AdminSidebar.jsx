@@ -678,14 +678,12 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
           "lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
           isCollapsed ? "w-20" : "w-80",
-          "bg-[#576574]"
+          "bg-neutral-950"
         )}
-        style={{ backgroundColor: 'var(--ad-primary, #576574)' }}
       >
         {/* Header with Logo and Brand */}
         <div 
-          className="shrink-0 px-3 py-3 border-b border-neutral-700/30 animate-[fadeIn_0.4s_ease-out] bg-[#4a5664]"
-          style={{ backgroundColor: 'var(--ad-primary-strong, #4a5664)' }}
+          className="shrink-0 px-3 py-3 border-b border-neutral-800 animate-[fadeIn_0.4s_ease-out] bg-neutral-950"
         >
           <div className="flex items-center justify-between mb-3">
             {!isCollapsed && (
@@ -774,7 +772,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
-                  "w-full pl-9 py-2.5 bg-[#404c59] border border-[#394450] rounded-lg text-base font-bold text-white placeholder:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-white/40 transition-all duration-200 text-left",
+                  "w-full pl-9 py-2.5 bg-neutral-900 border border-neutral-800 rounded-lg text-base font-bold text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-all duration-200 text-left",
                   searchQuery ? "pr-9" : "pr-3"
                 )}
               />
