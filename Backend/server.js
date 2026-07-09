@@ -7,7 +7,6 @@ import { connectRedis, closeRedis } from './src/config/redis.js';
 import { initSocket } from './src/config/socket.js';
 import { initializeQueues, closeBullMQConnection } from './src/queues/index.js';
 import { expireExpiredOffers } from './src/modules/food/admin/services/admin.service.js';
-import { syncExpiredFssaiNotifications } from './src/modules/food/restaurant/services/fssaiExpiry.service.js';
 import { syncSubscriptionScheduleReminders } from './src/modules/food/subscription/services/subscription.service.js';
 
 import { logger } from './src/utils/logger.js';
@@ -17,7 +16,6 @@ import { loadEnvFromDb } from './src/config/envLoader.js';
 const SHUTDOWN_TIMEOUT_MS = 10000;
 let server = null;
 let expireOffersInterval = null;
-let fssaiExpiryInterval = null;
 let subscriptionReminderInterval = null;
 
 const gracefulShutdown = async (signal) => {
@@ -32,7 +30,6 @@ const gracefulShutdown = async (signal) => {
             await closeRedis();
             await closeBullMQConnection();
             if (expireOffersInterval) clearInterval(expireOffersInterval);
-            if (fssaiExpiryInterval) clearInterval(fssaiExpiryInterval);
             if (subscriptionReminderInterval) clearInterval(subscriptionReminderInterval);
             logger.info('Graceful shutdown complete');
             process.exit(0);
@@ -105,15 +102,6 @@ const startServer = async () => {
         runExpire();
         expireOffersInterval = setInterval(runExpire, 5 * 60 * 1000);
 
-        const runFssaiExpirySync = async () => {
-            try {
-                await syncExpiredFssaiNotifications();
-            } catch (err) {
-                logger.error(`FSSAI expiry sync error: ${err.message}`);
-            }
-        };
-        runFssaiExpirySync();
-        fssaiExpiryInterval = setInterval(runFssaiExpirySync, 60 * 60 * 1000);
 
         const runSubscriptionReminders = async () => {
             try {

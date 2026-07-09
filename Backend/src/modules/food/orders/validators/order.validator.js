@@ -48,7 +48,7 @@ const pricingSchema = z.object({
 export function validateCalculateOrderDto(body) {
     const schema = z.object({
         items: z.array(orderItemSchema).min(1, 'At least one item required'),
-        restaurantId: z.string().min(1, 'Restaurant id required'),
+        restaurantId: z.string().optional(),
         deliveryAddress: z
             .object({
                 location: z
@@ -78,7 +78,7 @@ export function validateCreateOrderDto(body) {
     const schema = z.object({
         items: z.array(orderItemSchema).min(1, 'At least one item required'),
         address: addressSchema,
-        restaurantId: z.string().min(1, 'Restaurant id required'),
+        restaurantId: z.string().optional(),
         restaurantName: z.string().optional(),
         customerName: z.string().optional(),
         customerPhone: z.string().optional(),
@@ -182,3 +182,4 @@ export function validateOrderRatingsDto(body) {
     }
     return result.data;
 }
+

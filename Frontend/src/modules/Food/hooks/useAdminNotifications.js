@@ -202,33 +202,22 @@ export default function useAdminNotifications(options = {}) {
       const dismissed = new Set(getDismissedIds());
 
       const [
-        restaurantsRes,
         deliveryJoinRes,
         foodApprovalRes,
         supportRes,
         deliverySupportRes,
-        fssaiExpiredRes,
       ] = await Promise.all([
-        adminAPI.getPendingRestaurants(),
         adminAPI.getDeliveryPartnerJoinRequests({ page: 1, limit: 50 }),
-        adminAPI.getPendingFoodApprovals({ page: 1, limit: 50 }),
+        adminAPI.getPendingFoodApprovals({ page: 1, limit: 50 }).catch(() => ({ data: [] })),
         adminAPI.getSupportTicketsAdmin({ page: 1, limit: 50, source: "all" }),
         adminAPI.getDeliverySupportTickets({ page: 1, limit: 50 }),
-        adminAPI.getExpiredFssaiNotifications(),
       ]);
 
-      const restaurantRows =
-        restaurantsRes?.data?.data ||
-        restaurantsRes?.data?.restaurants ||
-        [];
-
       const aggregated = uniqueById([
-        ...mapPendingRestaurants(restaurantRows),
         ...mapDeliveryJoinRequests(deliveryJoinRes),
         ...mapFoodApprovals(foodApprovalRes),
         ...mapUserRestaurantSupport(supportRes),
         ...mapDeliverySupport(deliverySupportRes),
-        ...mapExpiredFssai(fssaiExpiredRes),
       ])
         .filter((item) => !dismissed.has(item.id))
         .sort((a, b) => toDateValue(b.createdAt) - toDateValue(a.createdAt));

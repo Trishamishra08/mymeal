@@ -79,6 +79,7 @@ const Accessibility = lazy(() => import("@food/pages/user/profile/Accessibility"
 const Logout = lazy(() => import("@food/pages/user/profile/Logout"))
 const ReferEarn = lazy(() => import("@food/pages/user/profile/ReferEarn"))
 const MySubscriptions = lazy(() => import("@food/pages/user/profile/MySubscriptions"))
+const SubscriptionOrders = lazy(() => import("@food/pages/user/profile/SubscriptionOrders"))
 const SubscriptionDetails = lazy(() => import("@food/pages/user/profile/SubscriptionDetails"))
 const ChangeSubscriptionDish = lazy(() => import("@food/pages/user/profile/ChangeSubscriptionDish"))
 const ChangeSubscriptionDishCheckout = lazy(() => import("@food/pages/user/profile/ChangeSubscriptionDishCheckout"))
@@ -242,6 +243,14 @@ export default function UserRouter() {
             element={
               <ProtectedRoute requiredRole="user" loginPath="/user/auth/login">
                 <MySubscriptions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="profile/subscription-orders"
+            element={
+              <ProtectedRoute requiredRole="user" loginPath="/user/auth/login">
+                <SubscriptionOrders />
               </ProtectedRoute>
             }
           />

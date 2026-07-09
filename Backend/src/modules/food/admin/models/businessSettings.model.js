@@ -37,10 +37,11 @@ const businessSettingsSchema = new mongoose.Schema(
         maxCodAmount: { type: Number, default: 0 }, // 0 means no limit
         maintenanceMode: { type: Boolean, default: false },
         customerRegistration: { type: Boolean, default: true },
-        restaurantRegistration: { type: Boolean, default: true },
+        restaurantRegistration: { type: Boolean, default: false },
         deliveryRegistration: { type: Boolean, default: true }
     },
     { timestamps: true }
 );
 
 export const FoodBusinessSettings = mongoose.model('FoodBusinessSettings', businessSettingsSchema);
+

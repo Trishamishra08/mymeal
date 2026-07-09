@@ -1,5 +1,5 @@
 import { FoodGourmetRestaurant } from '../models/gourmetRestaurant.model.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { getPublicGourmetRestaurants } from '../services/gourmet.service.js';
 
 /** GET /hero-banners/gourmet - list Gourmet (admin, all entries). Returns { success, data: { restaurants } } */

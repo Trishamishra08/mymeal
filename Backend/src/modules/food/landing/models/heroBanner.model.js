@@ -1,5 +1,14 @@
 import mongoose from 'mongoose';
 
+// Register dummy FoodRestaurant model if not exists to prevent populate errors (legacy support)
+if (!mongoose.models.FoodRestaurant) {
+    mongoose.model('FoodRestaurant', new mongoose.Schema({
+        restaurantName: String,
+        slug: String,
+        zoneId: mongoose.Schema.Types.ObjectId
+    }, { collection: 'food_restaurants' }));
+}
+
 const foodHeroBannerSchema = new mongoose.Schema(
     {
         imageUrl: {

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { ValidationError } from '../../../../core/auth/errors.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { FoodDiningCategory } from '../models/diningCategory.model.js';
 import { FoodDiningRestaurant } from '../models/diningRestaurant.model.js';
 import { FoodDiningRequest } from '../models/diningRequest.model.js';

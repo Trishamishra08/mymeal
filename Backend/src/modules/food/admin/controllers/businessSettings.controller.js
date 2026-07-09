@@ -1,5 +1,5 @@
 import { FoodBusinessSettings } from '../models/businessSettings.model.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { sendResponse } from '../../../../utils/response.js';
 import { uploadImageBufferDetailed, uploadFileBufferDetailed } from '../../../../services/cloudinary.service.js';
 
@@ -126,7 +126,7 @@ export async function updateBusinessSettings(req, res, next) {
             settings.customerRegistration = Boolean(customerRegistration === 'true' || customerRegistration === true);
         }
         if (restaurantRegistration !== undefined) {
-            settings.restaurantRegistration = Boolean(restaurantRegistration === 'true' || restaurantRegistration === true);
+            settings.restaurantRegistration = false;
         }
         if (deliveryRegistration !== undefined) {
             settings.deliveryRegistration = Boolean(deliveryRegistration === 'true' || deliveryRegistration === true);
@@ -199,3 +199,4 @@ export async function updateBusinessSettings(req, res, next) {
         next(error);
     }
 }
+

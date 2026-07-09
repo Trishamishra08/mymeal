@@ -9,7 +9,7 @@ export async function createSupportTicketController(req, res, next) {
         const type = String(body.type || '').trim();
         const issueType = String(body.issueType || '').trim();
         const description = String(body.description || '').trim();
-        if (!['order', 'restaurant', 'other'].includes(type)) {
+        if (!['order', 'other'].includes(type)) {
             return sendError(res, 400, 'Invalid ticket type');
         }
         if (!issueType) return sendError(res, 400, 'issueType required');
@@ -25,18 +25,11 @@ export async function createSupportTicketController(req, res, next) {
             }
             const orderMongoId = new mongoose.Types.ObjectId(body.orderId);
             doc.orderId = orderMongoId;
-            // Also try to link restaurantId automatically if possible
             const { FoodOrder } = await import('../../../food/orders/models/order.model.js');
             const order = await FoodOrder.findById(orderMongoId).select('restaurantId').lean();
             if (order?.restaurantId) {
                 doc.restaurantId = order.restaurantId;
             }
-        }
-        if (type === 'restaurant') {
-            if (!body.restaurantId || !mongoose.Types.ObjectId.isValid(body.restaurantId)) {
-                return sendError(res, 400, 'restaurantId required');
-            }
-            doc.restaurantId = new mongoose.Types.ObjectId(body.restaurantId);
         }
         const created = await FoodSupportTicket.create(doc);
         return sendResponse(res, 201, 'Ticket created', { ticket: created.toObject() });

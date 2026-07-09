@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { FoodOrder } from '../models/order.model.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { FoodTransaction } from '../models/foodTransaction.model.js';
 import { FoodDeliveryPartner } from '../../delivery/models/deliveryPartner.model.js';
 import { FoodDeliveryCashDeposit } from '../../delivery/models/foodDeliveryCashDeposit.model.js';
@@ -13,10 +13,14 @@ import {
 import { buildPaginationOptions, buildPaginatedResult } from '../../../../utils/helpers.js';
 import { logger } from '../../../../utils/logger.js';
 
+import { getSingleKitchenContext } from '../../shared/singleKitchen.service.js';
+
 async function injectAdminBusinessLocation(data) {
   if (!data) return data;
 
-  const inject = (out) => {
+  let fallbackSettings = null;
+
+  const inject = async (out) => {
     if (!out) return out;
     const source = out.restaurantId || out.restaurant || null;
     const location = source?.location || {};
@@ -46,18 +50,41 @@ async function injectAdminBusinessLocation(data) {
       }
     }
 
+    if (!out.restaurantLocation || !out.restaurantName || !out.restaurantAddress) {
+      if (!fallbackSettings) {
+         try {
+           fallbackSettings = await getSingleKitchenContext();
+         } catch(e) {}
+      }
+      if (fallbackSettings?.pickupHub) {
+         const hub = fallbackSettings.pickupHub;
+         out.restaurantName = out.restaurantName || hub.name || 'Admin Kitchen';
+         out.restaurantPhone = out.restaurantPhone || hub.phone || '';
+         out.restaurantAddress = out.restaurantAddress || hub.address || '';
+         if (!out.restaurantLocation && hub.location?.coordinates?.length === 2) {
+            out.restaurantLocation = {
+                latitude: Number(hub.location.coordinates[1]),
+                longitude: Number(hub.location.coordinates[0]),
+                address: hub.address || '',
+                area: '', city: '', state: ''
+            };
+         }
+      }
+    }
+
     delete out.restaurantId;
     delete out.restaurant;
     return out;
   };
 
   if (Array.isArray(data)) {
-      return data.map(inject);
+      return Promise.all(data.map(inject));
   }
   return inject(data);
 }
 import { getIO, rooms } from '../../../../config/socket.js';
 import { getFirebaseDB } from '../../../../config/firebase.js';
+import { notifyAdminsSafely } from '../../../../core/notifications/firebase.service.js';
 import {
   fetchRazorpayPaymentLink,
   isRazorpayConfigured,
@@ -190,7 +217,7 @@ function emitOrderUpdate(order, deliveryPartnerId, options = {}) {
         'order_status_update',
         payload,
       );
-      io.to(rooms.restaurant(order.restaurantId)).emit(
+      io.to('admin').emit(
         'order_status_update',
         payload,
       );
@@ -330,10 +357,6 @@ export async function getCurrentTripDelivery(deliveryPartnerId) {
       $in: ['confirmed', 'preparing', 'ready_for_pickup', 'picked_up'],
     },
   })
-    .populate({
-      path: 'restaurantId',
-      select: 'restaurantName name phone location addressLine1 area city state profileImage',
-    })
     .populate({ path: 'userId', select: 'name phone' })
     .sort({ updatedAt: -1 })
     .lean();
@@ -366,10 +389,6 @@ export async function getActiveTripsDelivery(deliveryPartnerId) {
       $in: ['confirmed', 'preparing', 'ready_for_pickup', 'picked_up'],
     },
   })
-    .populate({
-      path: 'restaurantId',
-      select: 'restaurantName name phone location addressLine1 area city state profileImage',
-    })
     .populate({ path: 'userId', select: 'name phone' })
     .sort({ updatedAt: -1 })
     .lean();
@@ -434,10 +453,6 @@ export async function listOrdersAvailableDelivery(deliveryPartnerId, query) {
       .skip(skip)
       .limit(limit)
       .populate('userId', 'name phone email')
-      .populate(
-        'restaurantId',
-        'restaurantName name address phone ownerPhone location profileImage',
-      )
       .lean(),
     FoodOrder.countDocuments(filter),
   ]);
@@ -534,7 +549,7 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
       },
     },
     { new: true },
-  ).populate('restaurantId userId');
+  ).populate('userId');
 
   if (!order) {
     const existing = await FoodOrder.findOne(identity)
@@ -556,7 +571,7 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
       String(existing.dispatch?.deliveryPartnerId || '') === String(deliveryPartnerId)
     ) {
       const acceptedOrder = await FoodOrder.findOne(identity)
-        .populate('restaurantId userId');
+        .populate('userId');
       return acceptedOrder
         ? await injectAdminBusinessLocation(sanitizeOrderForExternal(acceptedOrder))
         : null;
@@ -634,7 +649,7 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
           dispatchStatus: order.dispatch?.status,
         };
         io.to(rooms.delivery(deliveryPartnerId)).emit('order_status_update', payload);
-        io.to(rooms.restaurant(order.restaurantId)).emit('order_status_update', payload);
+        io.to('admin').emit('order_status_update', payload);
         io.to(rooms.user(order.userId)).emit('order_status_update', payload);
 
         // Broadcast order_claimed to ALL online delivery partners so every popup is dismissed
@@ -674,29 +689,23 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
         },
       );
 
-      await notifyOwnerSafely(
-        { ownerType: 'RESTAURANT', ownerId: order.restaurantId },
-        {
-          title: `Rider assigned`,
-          body: `Order #${order.order_id || order.orderId || order._id.toString()} is now assigned to a delivery partner.`,
-          data: {
-            type: 'delivery_accepted',
-            orderId: order._id.toString(),
-            orderMongoId: order._id?.toString?.() || '',
-            dispatchStatus: order.dispatch?.status,
-            link: '/food/restaurant/orders',
-          },
+      await notifyAdminsSafely({
+        title: `Delivery partner assigned`,
+        body: `Order #${order.order_id || order.orderId || order._id.toString()} is now assigned to a delivery partner for kitchen pickup.`,
+        data: {
+          type: 'delivery_accepted',
+          orderId: order._id.toString(),
+          orderMongoId: order._id?.toString?.() || '',
+          dispatchStatus: order.dispatch?.status,
+          link: '/food/admin/orders',
         },
-      );
+      });
     } catch (error) {
       logger.error(
-        `Error notifying delivery acceptance for ${order._id}: ${
-          error?.message || error
-        }`,
+        `Error notifying delivery acceptance for ${order._id}: ${error?.message || error}`,
       );
     }
   })();
-
   enqueueOrderEvent('delivery_accepted', {
     orderMongoId: order._id?.toString?.(),
     orderId: order._id.toString(),
@@ -835,19 +844,15 @@ export async function confirmReachedPickupDelivery(orderId, deliveryPartnerId) {
   emitOrderUpdate(order, deliveryPartnerId);
 
   try {
-    const restaurant = await FoodRestaurant.findById(order.restaurantId)
-      .select('restaurantName')
-      .lean();
+    const restaurant = mongoose.models.FoodRestaurant ? await mongoose.models.FoodRestaurant.findById(order.restaurantId).select('restaurantName').lean() : null;
     const partner = await FoodDeliveryPartner.findById(deliveryPartnerId)
       .select('name')
       .lean();
 
-    await notifyOwnersSafely(
-      [{ ownerType: 'RESTAURANT', ownerId: order.restaurantId }],
-      {
-        title: 'Rider arrived!',
+    await notifyAdminsSafely({
+        title: 'Rider arrived at kitchen!',
         body: `${partner?.name || 'The delivery partner'} has arrived at ${
-          restaurant?.restaurantName || 'your restaurant'
+          restaurant?.restaurantName || 'your kitchen'
         } to pick up Order #${order.order_id || order.orderId || order._id.toString()}.`,
         data: {
           type: 'rider_arrived',
@@ -859,7 +864,7 @@ export async function confirmReachedPickupDelivery(orderId, deliveryPartnerId) {
     );
   } catch (error) {
     logger.error(
-      `Error notifying restaurant about rider arrival for ${order._id}: ${
+      `Error notifying admin kitchen about rider arrival for ${order._id}: ${
         error?.message || error
       }`,
     );
@@ -878,7 +883,7 @@ export async function confirmReachedPickupDelivery(orderId, deliveryPartnerId) {
 
 /**
  * Rider presses "Request OTP" button after uploading bill.
- * Emits pickup OTP to restaurant via socket so they can relay it verbally.
+ * Emits pickup OTP to the admin kitchen via socket so it can be relayed verbally.
  */
 export async function requestPickupOtp(orderId, deliveryPartnerId) {
   const identity = buildOrderIdentityFilter(orderId);
@@ -892,7 +897,7 @@ export async function requestPickupOtp(orderId, deliveryPartnerId) {
 
   const otp = order.pickupOtp;
   if (!otp) {
-    throw new ValidationError('Pickup OTP not generated yet. Please confirm arrival at restaurant first.');
+    throw new ValidationError('Pickup OTP not generated yet. Please confirm arrival at the pickup hub first.');
   }
 
   // Update DB to register the request so fallback polling can catch it
@@ -904,7 +909,7 @@ export async function requestPickupOtp(orderId, deliveryPartnerId) {
 
   const io = getIO();
   if (io) {
-    io.to(rooms.restaurant(order.restaurantId)).emit('pickup_otp_reveal', {
+    io.to('admin').emit('pickup_otp_reveal', {
       orderMongoId: order._id.toString(),
       orderId: order.order_id || order._id.toString(),
       otp,
@@ -913,27 +918,22 @@ export async function requestPickupOtp(orderId, deliveryPartnerId) {
   }
 
   try {
-    const restaurant = await mongoose.model('FoodRestaurant').findById(order.restaurantId).select('restaurantName').lean();
-    await notifyOwnersSafely(
-      [{ ownerType: 'RESTAURANT', ownerId: order.restaurantId }],
-      {
-        title: 'OTP Requested! 🔐',
-        body: `Delivery partner is requesting the Pickup OTP for Order #${order.order_id || order._id.toString()}. The OTP is: ${otp}`,
-        data: {
-          type: 'pickup_otp_request',
-          orderId: String(order.order_id || order._id.toString()),
-          orderMongoId: String(order._id),
-          otp: String(otp)
-        },
+    await notifyAdminsSafely({
+      title: 'Pickup OTP Requested',
+      body: `Delivery partner is requesting the pickup OTP for Order #${order.order_id || order._id.toString()}. The OTP is: ${otp}`,
+      data: {
+        type: 'pickup_otp_request',
+        orderId: String(order.order_id || order._id.toString()),
+        orderMongoId: String(order._id),
+        otp: String(otp)
       },
-    );
+    });
   } catch (error) {
-    logger.error(`Error notifying restaurant about OTP request for ${order._id}: ${error?.message || error}`);
+    logger.error(`Error notifying admin kitchen about OTP request for ${order._id}: ${error?.message || error}`);
   }
 
   return { otp };
 }
-
 export async function confirmPickupDelivery(orderId, deliveryPartnerId, billImageUrl, otp) {
   const identity = buildOrderIdentityFilter(orderId);
   const order = await FoodOrder.findOne(identity).select('+deliveryOtp +pickupOtp');
@@ -958,7 +958,7 @@ export async function confirmPickupDelivery(orderId, deliveryPartnerId, billImag
       throw new ValidationError("Pickup OTP is required to mark this order as picked up.");
     }
     if (!isOtpMatch(order.pickupOtp, otp)) {
-      throw new ValidationError("Invalid Pickup OTP. Please ask the restaurant for the correct OTP.");
+      throw new ValidationError("Invalid Pickup OTP. Please ask the admin kitchen for the correct OTP.");
     }
     order.deliveryVerification.pickupOtp.verified = true;
     order.markModified('deliveryVerification.pickupOtp.verified');
@@ -1299,3 +1299,4 @@ export async function updateOrderStatusDelivery(orderId, deliveryPartnerId, orde
   });
   return order.toObject();
 }
+

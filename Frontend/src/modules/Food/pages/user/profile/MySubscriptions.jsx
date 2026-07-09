@@ -117,12 +117,8 @@ export default function MySubscriptions() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <h2 className="text-base font-bold text-gray-900 dark:text-white truncate">
-                            {subscription.dishName || "Subscription meal"}
+                            {subscription.planName || subscription.dishName || "Subscription meal"}
                           </h2>
-                          <p className="mt-1 flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 truncate">
-                            <Store className="h-4 w-4" />
-                            {subscription.restaurantName || "Restaurant"}
-                          </p>
                         </div>
                         <span
                           className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-bold uppercase ${getStatusClasses(subscription.status)}`}
@@ -138,7 +134,7 @@ export default function MySubscriptions() {
                             Plan
                           </p>
                           <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
-                            {subscription.planTitle || `${subscription.planDays} Days`}
+                            {subscription.planTitle || `${subscription.durationDays || subscription.planDays || 0} Days`}
                           </p>
                         </div>
                         <div className="rounded-xl bg-gray-50 dark:bg-gray-900/60 p-3">
@@ -155,7 +151,7 @@ export default function MySubscriptions() {
                       <div className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
                         <p className="flex items-center gap-2">
                           <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          Meals: <span className="font-medium">{Array.isArray(subscription.meals) && subscription.meals.length > 0 ? subscription.meals.join(", ") : "-"}</span>
+                          Meals: <span className="font-medium">{subscription.mealType || (Array.isArray(subscription.meals) && subscription.meals.length > 0 ? subscription.meals.join(", ") : "-")}</span>
                         </p>
                         <p className="flex items-center gap-2">
                           <Clock3 className="h-4 w-4 text-[#55254b]" />

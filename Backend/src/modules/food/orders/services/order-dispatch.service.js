@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { FoodOrder, FoodSettings } from '../models/order.model.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { FoodDeliveryPartner } from '../../delivery/models/deliveryPartner.model.js';
 import { FoodDeliveryCashDeposit } from '../../delivery/models/foodDeliveryCashDeposit.model.js';
 import { FoodDeliveryCashLimit } from '../../admin/models/deliveryCashLimit.model.js';
@@ -18,6 +18,7 @@ import {
   notifyOwnersSafely,
   injectAdminBusinessLocation,
 } from './order.helpers.js';
+import { getSingleKitchenContext } from '../../shared/singleKitchen.service.js';
 
 async function filterPartnersByCashLimit(partners = [], options = {}) {
   // Since we are removing cash limit checks, we simply map partners to ensure they have expected shape.
@@ -37,18 +38,21 @@ async function listNearbyOnlineDeliveryPartners(
   { maxKm = 15, limit = 25, requiredAmount = 0, allowOverLimitFallback = true } = {},
 ) {
   const rId = (restaurantId?._id || restaurantId).toString();
-  const restaurant = await FoodRestaurant.findById(rId)
-    .select("location")
-    .lean();
+  let restaurant = mongoose.models.FoodRestaurant ? await mongoose.models.FoodRestaurant.findById(rId).select("location").lean() : null;
+  let rLng, rLat;
 
-  if (!restaurant?.location?.coordinates?.length) {
-    // Restaurant has no GPS coordinates — cannot calculate distance to riders.
-    // Return empty so no one gets notified until restaurant sets their location.
-    logger.warn(`listNearbyOnlineDeliveryPartners: Restaurant ${rId} has no location coordinates. Skipping dispatch.`);
-    return { restaurant: null, partners: [] };
+  if (restaurant?.location?.coordinates?.length === 2) {
+    [rLng, rLat] = restaurant.location.coordinates;
+  } else {
+    // Fallback to central kitchen
+    const { pickupHub } = await getSingleKitchenContext();
+    if (pickupHub?.location?.coordinates?.length === 2) {
+      [rLng, rLat] = pickupHub.location.coordinates;
+    } else {
+      logger.warn(`listNearbyOnlineDeliveryPartners: Restaurant ${rId} and central kitchen have no location coordinates. Skipping dispatch.`);
+      return { restaurant: null, partners: [] };
+    }
   }
-
-  const [rLng, rLat] = restaurant.location.coordinates;
   const allOnline = await FoodDeliveryPartner.find({
     availabilityStatus: "online",
   })
@@ -414,11 +418,11 @@ export async function resendDeliveryNotificationRestaurant(orderId, restaurantId
     order.statusHistory = Array.isArray(order.statusHistory) ? order.statusHistory : [];
     order.statusHistory.push({
       at: new Date(),
-      byRole: 'RESTAURANT',
+      byRole: 'ADMIN',
       byId: new mongoose.Types.ObjectId(restaurantId),
       from: normalizedStatus,
       to: 'preparing',
-      note: 'Restaurant manually resent delivery request',
+      note: 'Admin kitchen manually resent delivery request',
     });
     await order.save();
   }
@@ -433,7 +437,7 @@ export async function resendDeliveryNotificationRestaurant(orderId, restaurantId
   });
   const shortlistedCount = Array.isArray(preview?.partners) ? preview.partners.length : 0;
 
-  // Force a truly fresh dispatch cycle when restaurant manually resends.
+  // Force a truly fresh dispatch cycle when the admin kitchen manually resends.
   // This clears any stale in-flight dispatch lock or half-finished assignment state
   // so delivery partners receive the new socket offer immediately.
   await FoodOrder.findByIdAndUpdate(order._id, {
@@ -486,3 +490,11 @@ export async function resendDeliveryNotificationRestaurant(orderId, restaurantId
 
 
 
+
+export async function resendDeliveryNotificationAdmin(orderId) {
+  const { restaurant } = await getSingleKitchenContext();
+  if (!restaurant?._id) {
+    throw new ValidationError('Admin kitchen not found');
+  }
+  return resendDeliveryNotificationRestaurant(orderId, restaurant._id);
+}

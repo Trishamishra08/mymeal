@@ -1,4 +1,4 @@
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { FoodItem } from '../../admin/models/food.model.js';
 import { FoodCategory } from '../../admin/models/category.model.js';
 import mongoose from 'mongoose';

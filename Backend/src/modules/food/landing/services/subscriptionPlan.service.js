@@ -1,232 +1,177 @@
+import { ValidationError, NotFoundError } from '../../../../core/auth/errors.js';
 import { FoodSubscriptionPlan } from '../models/subscriptionPlan.model.js';
+import { FoodSubscription } from '../../subscription/models/subscription.model.js';
 
-const PLAN_TYPES = ['Weekly', 'Monthly', 'Custom'];
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Lunch + Dinner'];
+const DELIVERY_TYPES = ['Same Delivery', 'Separate Delivery'];
 
-const defaultPlans = [
-    {
-        title: 'Weekly Lunch Plan',
-        planType: 'Weekly',
-        durationDays: 7,
-        price: 999,
-        mealType: 'Lunch',
-        dailyTiffinQuantity: 1,
-        deliveryTime: { from: '12:00', to: '14:00' },
-        allowMealCustomization: true,
-        customizationCutoffTime: '21:00',
-        allowSkipDelivery: true,
-        allowAddOnTiffin: true,
-        description: 'Weekly tiffin subscription for daily lunch.',
-        sortOrder: 0
-    },
-    {
-        title: 'Monthly Lunch Plan',
-        planType: 'Monthly',
-        durationDays: 30,
-        price: 3499,
-        mealType: 'Lunch',
-        dailyTiffinQuantity: 1,
-        deliveryTime: { from: '12:00', to: '14:00' },
-        allowMealCustomization: true,
-        customizationCutoffTime: '21:00',
-        allowSkipDelivery: true,
-        allowAddOnTiffin: true,
-        description: 'Monthly lunch tiffin plan for regular customers.',
-        sortOrder: 1
-    },
-    {
-        title: 'Monthly Lunch + Dinner Plan',
-        planType: 'Monthly',
-        durationDays: 30,
-        price: 6499,
-        mealType: 'Lunch + Dinner',
-        dailyTiffinQuantity: 2,
-        deliveryTime: { from: '12:00', to: '21:00' },
-        allowMealCustomization: true,
-        customizationCutoffTime: '21:00',
-        allowSkipDelivery: true,
-        allowAddOnTiffin: true,
-        description: 'Monthly combo plan for lunch and dinner tiffins.',
-        sortOrder: 2
-    }
-];
+function escapeRegex(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-const ensureDefaultPlans = async () => {
-    const count = await FoodSubscriptionPlan.countDocuments({ isDeleted: { $ne: true } });
-    if (count > 0) return;
-    await FoodSubscriptionPlan.insertMany(
-        defaultPlans.map((plan) => ({
-            ...plan,
-            subtitle: '',
-            badge: '',
-            features: [],
-            currency: 'INR',
-            isActive: true,
-            isDeleted: false,
-            deletedAt: null
-        }))
-    );
-};
+function toBool(value, fallback = false) {
+  if (value === undefined) return fallback;
+  if (typeof value === 'boolean') return value;
+  return String(value).trim().toLowerCase() === 'true';
+}
 
-export const listSubscriptionPlans = async ({ publicOnly = false, search = '', status = 'all' } = {}) => {
-    await ensureDefaultPlans();
-    const filter = { isDeleted: { $ne: true } };
-    if (publicOnly) filter.isActive = true;
-    if (!publicOnly && status === 'active') filter.isActive = true;
-    if (!publicOnly && status === 'inactive') filter.isActive = false;
-    const searchText = String(search || '').trim();
-    if (searchText) {
-        const regex = new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-        filter.$or = [
-            { title: regex },
-            { planType: regex },
-            { mealType: regex },
-            { description: regex }
-        ];
-    }
-    return FoodSubscriptionPlan.find(filter).sort({ sortOrder: 1, durationDays: 1 }).lean();
-};
+function normalizeBenefits(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || '').trim()).filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    return value.split('\n').map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
 
-const getNextSortOrder = async () => {
-    const last = await FoodSubscriptionPlan.findOne({ isDeleted: { $ne: true } }).sort({ sortOrder: -1 }).select('sortOrder').lean();
-    return (last?.sortOrder ?? -1) + 1;
-};
-
-const toBoolean = (value, fallback = false) => {
-    if (value === undefined || value === null || value === '') return fallback;
-    if (typeof value === 'boolean') return value;
-    return String(value).toLowerCase() === 'true';
-};
-
-const normalizeEnum = (value, allowed, fallback) => {
-    const text = String(value || '').trim();
-    return allowed.includes(text) ? text : fallback;
-};
-
-const normalizePlanPayload = (payload = {}) => ({
-    title: String(payload.title || payload.planName || '').trim(),
-    planType: normalizeEnum(payload.planType, PLAN_TYPES, 'Weekly'),
-    durationDays: Number(payload.durationDays),
-    price: Number(payload.price),
-    mealType: normalizeEnum(payload.mealType, MEAL_TYPES, ''),
-    dailyTiffinQuantity: Number(payload.dailyTiffinQuantity || 1),
+function normalizePlanPayload(payload = {}, current = {}) {
+  return {
+    name: String(payload.name ?? payload.planName ?? current.name ?? '').trim(),
+    description: String(payload.description ?? current.description ?? '').trim(),
+    durationDays: Number(payload.durationDays ?? current.durationDays ?? 0),
+    price: Number(payload.price ?? current.price ?? 0),
+    mealType: String(payload.mealType ?? current.mealType ?? '').trim(),
+    dailyTiffinQuantity: Number(payload.dailyTiffinQuantity ?? current.dailyTiffinQuantity ?? 1),
     deliveryTime: {
-        from: String(payload.deliveryTime?.from || payload.deliveryFrom || '').trim(),
-        to: String(payload.deliveryTime?.to || payload.deliveryTo || '').trim()
+      from: String(payload.deliveryTime?.from ?? payload.deliveryFrom ?? current.deliveryTime?.from ?? '').trim(),
+      to: String(payload.deliveryTime?.to ?? payload.deliveryTo ?? current.deliveryTime?.to ?? '').trim(),
+      label: String(payload.deliveryTime?.label ?? current.deliveryTime?.label ?? '').trim(),
     },
-    allowMealCustomization: toBoolean(payload.allowMealCustomization, false),
-    customizationCutoffTime: String(payload.customizationCutoffTime || '').trim(),
-    allowSkipDelivery: toBoolean(payload.allowSkipDelivery, false),
-    allowAddOnTiffin: toBoolean(payload.allowAddOnTiffin, false),
-    description: String(payload.description || '').trim(),
-    sortOrder: payload.sortOrder === undefined && payload.order === undefined ? undefined : Number(payload.sortOrder ?? payload.order),
-    isActive: payload.isActive === undefined ? undefined : toBoolean(payload.isActive, true),
-    currency: 'INR',
-    subtitle: '',
-    badge: '',
-    features: []
-});
+    enableMealCustomization: toBool(payload.enableMealCustomization, current.enableMealCustomization ?? true),
+    customizationCutoffTime: String(payload.customizationCutoffTime ?? current.customizationCutoffTime ?? '').trim(),
+    enableAddressChange: toBool(payload.enableAddressChange, current.enableAddressChange ?? true),
+    addressChangeCutoffTime: String(payload.addressChangeCutoffTime ?? current.addressChangeCutoffTime ?? '').trim(),
+    enableSkipDelivery: toBool(payload.enableSkipDelivery, current.enableSkipDelivery ?? true),
+    skipLimit: Number(payload.skipLimit ?? current.skipLimit ?? 0),
+    enableAddOnTiffin: toBool(payload.enableAddOnTiffin, current.enableAddOnTiffin ?? true),
+    maxAddOnQuantity: Number(payload.maxAddOnQuantity ?? current.maxAddOnQuantity ?? 0),
+    deliveryType: String(payload.deliveryType ?? current.deliveryType ?? 'Same Delivery').trim(),
+    benefits: normalizeBenefits(payload.benefits ?? current.benefits ?? []),
+    currency: String(payload.currency ?? current.currency ?? 'INR').trim().toUpperCase() || 'INR',
+    status: String(payload.status ?? current.status ?? 'active').trim().toLowerCase() === 'inactive' ? 'inactive' : 'active',
+    displayOrder: Number(payload.displayOrder ?? payload.order ?? current.displayOrder ?? 0),
+  };
+}
 
-const assertValidPlan = (data) => {
-    if (!data.title) throw new Error('Plan name is required');
-    if (!Number.isFinite(data.durationDays) || data.durationDays <= 0) {
-        throw new Error('Duration days must be greater than 0');
-    }
-    if (!Number.isFinite(data.price) || data.price <= 0) {
-        throw new Error('Price must be greater than 0');
-    }
-    if (!data.mealType) throw new Error('Meal type is required');
-    if (!data.deliveryTime?.from || !data.deliveryTime?.to) {
-        throw new Error('Delivery time is required');
-    }
-    if (!Number.isFinite(data.dailyTiffinQuantity) || data.dailyTiffinQuantity <= 0) {
-        throw new Error('Daily tiffin quantity must be greater than 0');
-    }
-};
+function assertPlanPayload(data) {
+  if (!data.name) throw new ValidationError('Plan name is required');
+  if (!Number.isInteger(data.durationDays) || data.durationDays <= 0) {
+    throw new ValidationError('Duration must be greater than 0 days');
+  }
+  if (!Number.isFinite(data.price) || data.price <= 0) {
+    throw new ValidationError('Price must be greater than 0');
+  }
+  if (!MEAL_TYPES.includes(data.mealType)) {
+    throw new ValidationError('Valid meal type is required');
+  }
+  if (!Number.isInteger(data.dailyTiffinQuantity) || data.dailyTiffinQuantity <= 0) {
+    throw new ValidationError('Daily tiffin quantity must be at least 1');
+  }
+  if (!data.deliveryTime.from || !data.deliveryTime.to) {
+    throw new ValidationError('Delivery time is required');
+  }
+  if (!DELIVERY_TYPES.includes(data.deliveryType)) {
+    throw new ValidationError('Valid delivery type is required');
+  }
+  if (!Number.isInteger(data.skipLimit) || data.skipLimit < 0) {
+    throw new ValidationError('Skip limit must be 0 or greater');
+  }
+  if (!Number.isInteger(data.maxAddOnQuantity) || data.maxAddOnQuantity < 0) {
+    throw new ValidationError('Maximum add-on quantity must be 0 or greater');
+  }
+}
 
-const assertUniquePlanName = async (title, ignoreId = null) => {
-    const filter = {
-        title: { $regex: `^${String(title).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' },
-        isDeleted: { $ne: true }
-    };
-    if (ignoreId) filter._id = { $ne: ignoreId };
-    const existing = await FoodSubscriptionPlan.findOne(filter).select('_id').lean();
-    if (existing) throw new Error('Duplicate plan names are not allowed');
-};
+async function ensureUniquePlanName(name, ignoreId = null) {
+  const filter = {
+    name: { $regex: `^${escapeRegex(name)}$`, $options: 'i' },
+    isDeleted: false,
+  };
+  if (ignoreId) filter._id = { $ne: ignoreId };
+  const existing = await FoodSubscriptionPlan.findOne(filter).select('_id').lean();
+  if (existing) throw new ValidationError('A subscription plan with this name already exists');
+}
 
-export const createSubscriptionPlan = async (payload) => {
-    const data = normalizePlanPayload(payload);
-    assertValidPlan(data);
-    await assertUniquePlanName(data.title);
-    data.sortOrder = data.sortOrder ?? await getNextSortOrder();
-    data.isActive = data.isActive ?? true;
-    data.isDeleted = false;
-    data.deletedAt = null;
-    const doc = await FoodSubscriptionPlan.create(data);
-    return doc.toObject();
-};
+export async function listSubscriptionPlans({ publicOnly = false, search = '', status = 'all' } = {}) {
+  const filter = { isDeleted: false };
+  if (publicOnly) {
+    filter.status = 'active';
+  } else if (status === 'active' || status === 'inactive') {
+    filter.status = status;
+  }
 
-export const updateSubscriptionPlan = async (id, payload) => {
-    const doc = await FoodSubscriptionPlan.findOne({ _id: id, isDeleted: { $ne: true } });
-    if (!doc) return null;
-    const data = normalizePlanPayload({ ...doc.toObject(), ...payload });
-    assertValidPlan(data);
-    await assertUniquePlanName(data.title, doc._id);
+  const searchText = String(search || '').trim();
+  if (searchText) {
+    const regex = new RegExp(escapeRegex(searchText), 'i');
+    filter.$or = [{ name: regex }, { description: regex }, { mealType: regex }];
+  }
 
-    const updates = {};
-    const fields = [
-        'title',
-        'planType',
-        'durationDays',
-        'price',
-        'mealType',
-        'dailyTiffinQuantity',
-        'deliveryTime',
-        'allowMealCustomization',
-        'customizationCutoffTime',
-        'allowSkipDelivery',
-        'allowAddOnTiffin',
-        'description',
-        'currency',
-        'subtitle',
-        'badge',
-        'features'
-    ];
-    fields.forEach((field) => {
-        if (payload[field] !== undefined || ['currency', 'subtitle', 'badge', 'features'].includes(field)) {
-            updates[field] = data[field];
-        }
-    });
-    if (payload.sortOrder !== undefined || payload.order !== undefined) updates.sortOrder = data.sortOrder;
-    if (payload.isActive !== undefined) updates.isActive = data.isActive;
+  return FoodSubscriptionPlan.find(filter).sort({ displayOrder: 1, createdAt: -1 }).lean();
+}
 
-    Object.assign(doc, updates);
-    await doc.save();
-    return doc.toObject();
-};
+export async function createSubscriptionPlan(payload = {}) {
+  const data = normalizePlanPayload(payload);
+  assertPlanPayload(data);
+  await ensureUniquePlanName(data.name);
 
-export const deleteSubscriptionPlan = async (id) => {
-    const doc = await FoodSubscriptionPlan.findOne({ _id: id, isDeleted: { $ne: true } });
-    if (!doc) return { deleted: false };
-    doc.isDeleted = true;
-    doc.isActive = false;
-    doc.deletedAt = new Date();
-    await doc.save();
-    return { deleted: true };
-};
+  if (!Number.isFinite(data.displayOrder)) {
+    const last = await FoodSubscriptionPlan.findOne({ isDeleted: false }).sort({ displayOrder: -1 }).select('displayOrder').lean();
+    data.displayOrder = Number(last?.displayOrder || 0) + 1;
+  }
 
-export const toggleSubscriptionPlanStatus = async (id) => {
-    const doc = await FoodSubscriptionPlan.findOne({ _id: id, isDeleted: { $ne: true } });
-    if (!doc) return null;
-    return FoodSubscriptionPlan.findByIdAndUpdate(id, { isActive: !doc.isActive }, { new: true }).lean();
-};
+  const created = await FoodSubscriptionPlan.create({ ...data, isDeleted: false, deletedAt: null });
+  return created.toObject();
+}
 
-export const updateSubscriptionPlanOrder = async (id, sortOrder) => {
-    const nextOrder = Number(sortOrder);
-    if (Number.isNaN(nextOrder)) return null;
-    return FoodSubscriptionPlan.findOneAndUpdate(
-        { _id: id, isDeleted: { $ne: true } },
-        { sortOrder: nextOrder },
-        { new: true }
-    ).lean();
-};
+export async function updateSubscriptionPlan(id, payload = {}) {
+  const plan = await FoodSubscriptionPlan.findOne({ _id: id, isDeleted: false });
+  if (!plan) return null;
+
+  const data = normalizePlanPayload(payload, plan.toObject());
+  assertPlanPayload(data);
+  await ensureUniquePlanName(data.name, plan._id);
+
+  Object.assign(plan, data);
+  await plan.save();
+  return plan.toObject();
+}
+
+export async function deleteSubscriptionPlan(id) {
+  const plan = await FoodSubscriptionPlan.findOne({ _id: id, isDeleted: false });
+  if (!plan) return { deleted: false };
+
+  const inUse = await FoodSubscription.exists({ planId: plan._id, status: { $in: ['pending_payment', 'active', 'paused'] } });
+  if (inUse) {
+    throw new ValidationError('This plan is already used by subscriptions and cannot be deleted');
+  }
+
+  plan.isDeleted = true;
+  plan.status = 'inactive';
+  plan.deletedAt = new Date();
+  await plan.save();
+  return { deleted: true };
+}
+
+export async function toggleSubscriptionPlanStatus(id) {
+  const plan = await FoodSubscriptionPlan.findOne({ _id: id, isDeleted: false });
+  if (!plan) return null;
+  plan.status = plan.status === 'active' ? 'inactive' : 'active';
+  await plan.save();
+  return plan.toObject();
+}
+
+export async function updateSubscriptionPlanOrder(id, displayOrder) {
+  const nextOrder = Number(displayOrder);
+  if (!Number.isFinite(nextOrder)) throw new ValidationError('displayOrder is required');
+  return FoodSubscriptionPlan.findOneAndUpdate(
+    { _id: id, isDeleted: false },
+    { displayOrder: nextOrder },
+    { new: true },
+  ).lean();
+}
+
+export async function getSubscriptionPlanById(id) {
+  const plan = await FoodSubscriptionPlan.findOne({ _id: id, isDeleted: false }).lean();
+  if (!plan) throw new NotFoundError('Subscription plan not found');
+  return plan;
+}

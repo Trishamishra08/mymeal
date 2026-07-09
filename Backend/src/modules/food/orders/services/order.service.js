@@ -3,7 +3,7 @@ import { FoodOrder, FoodSettings } from '../models/order.model.js';
 // import { paymentSnapshotFromOrder } from './foodOrderPayment.service.js';
 import { logger } from '../../../../utils/logger.js';
 import { FoodUser } from '../../../../core/users/user.model.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { FoodDeliveryPartner } from '../../delivery/models/deliveryPartner.model.js';
 import { FoodZone } from '../../admin/models/zone.model.js';
 import { FoodFeeSettings } from '../../admin/models/feeSettings.model.js';
@@ -26,6 +26,7 @@ import {
 import { getIO, rooms } from '../../../../config/socket.js';
 import { addOrderJob } from '../../../../queues/producers/order.producer.js';
 import { fetchPolyline } from '../utils/googleMaps.js';
+import { getSingleKitchenContext } from '../../shared/singleKitchen.service.js';
 import { getFirebaseDB } from '../../../../config/firebase.js';
 import * as foodTransactionService from './foodTransaction.service.js';
 import * as userWalletService from '../../user/services/userWallet.service.js';
@@ -128,15 +129,15 @@ export async function calculateOrder(userId, dto) {
 
 // ----- Create order -----
 export async function createOrder(userId, dto) {
-  const restaurant = await FoodRestaurant.findById(dto.restaurantId)
-    .select("status restaurantName zoneId location isAcceptingOrders")
-    .lean();
-  if (!restaurant) throw new ValidationError("Restaurant not found");
-  if (restaurant.status !== "approved")
-    throw new ValidationError("Restaurant not accepting orders");
+  const { restaurant, pickupHub } = await getSingleKitchenContext();
+  if (!restaurant) throw new ValidationError('Admin kitchen not found');
+  if (restaurant.status !== 'approved')
+    throw new ValidationError('Admin kitchen is not accepting orders');
   if (restaurant.isAcceptingOrders === false)
-    throw new ValidationError("Restaurant not accepting orders");
+    throw new ValidationError('Admin kitchen is not accepting orders');
 
+  dto.restaurantId = restaurant._id?.toString?.() || String(restaurant._id || '');
+  dto.restaurantName = pickupHub?.name || restaurant.restaurantName || 'Admin Kitchen';
 
   const settings = await getDispatchSettings();
   const dispatchMode = settings.dispatchMode;
@@ -350,8 +351,8 @@ export async function createOrder(userId, dto) {
         ? "Complete Payment to Confirm Order"
         : "Order Confirmed! 🍔",
       body: isAwaitingOnlinePayment
-        ? `Order #${order.order_id || order._id} is created. Please complete payment to send it to ${restaurant.restaurantName || "the restaurant"}.`
-        : `Your order #${order.order_id || order._id} from ${restaurant.restaurantName || "the restaurant"} has been placed successfully.`,
+        ? `Order #${order.order_id || order._id} is created. Please complete payment to send it to ${dto.restaurantName || "the admin kitchen"}.`
+        : `Your order #${order.order_id || order._id} from ${dto.restaurantName || "the admin kitchen"} has been placed successfully.`,
       image: "https://i.ibb.co/3m2Yh7r/Appzeto-Brand-Image.png",
       data: {
         type: isAwaitingOnlinePayment
@@ -516,11 +517,18 @@ export async function listOrdersUser(userId, query) {
   const { page, limit, skip } = buildPaginationOptions(query);
   const filter = {
     userId: new mongoose.Types.ObjectId(userId),
-    // Exclude unpaid Razorpay orders (payment failed / user closed gateway)
+    // Exclude unpaid Razorpay orders
     $nor: [
       { "payment.method": "razorpay", "payment.status": "created" }
     ]
   };
+
+  if (query.excludeSubscriptions === 'true') {
+    filter.$nor.push({ orderType: "subscription" });
+  } else if (query.onlySubscriptions === 'true') {
+    filter.orderType = "subscription";
+  }
+
   const [docs, total] = await Promise.all([
     FoodOrder.find(filter)
       .populate(
@@ -568,7 +576,7 @@ export async function getOrderById(
   if (userId && orderUserId !== userId.toString())
     throw new ForbiddenError("Not your order");
   if (restaurantId && orderRestaurantId !== restaurantId.toString())
-    throw new ForbiddenError("Not your restaurant order");
+    throw new ForbiddenError("Not your assigned kitchen order");
   if (deliveryPartnerId && orderPartnerId !== deliveryPartnerId.toString())
     throw new ForbiddenError("Not assigned to you");
 
@@ -947,7 +955,7 @@ export async function cancelOrder(orderId, userId, reason, refundDestination = "
   await notifyOwnersSafely(
     [
       { ownerType: "USER", ownerId: userId },
-      { ownerType: "RESTAURANT", ownerId: order.restaurantId },
+      { ownerType: "ADMIN", ownerId: "GLOBAL" },
     ],
     {
       title: "Order Cancelled ❌",
@@ -972,7 +980,7 @@ export async function cancelOrder(orderId, userId, reason, refundDestination = "
         message: `Order #${order.order_id || order._id} has been cancelled by the customer. Reason: ${reason || "No reason provided"}.${refundDetail}`
       };
       io.to(rooms.user(userId)).emit("order_status_update", payload);
-      if (order.restaurantId) io.to(rooms.restaurant(order.restaurantId)).emit("order_status_update", payload);
+      io.to('admin').emit("order_status_update", payload);
       
       const assignedRiderId = order.dispatch?.deliveryPartnerId;
       if (assignedRiderId) {
@@ -1041,11 +1049,13 @@ export async function submitOrderRatings(orderId, userId, dto) {
   }
 
   await Promise.all([
-    applyAggregateRating(
-      FoodRestaurant,
-      order.restaurantId,
-      dto.restaurantRating,
-    ),
+    mongoose.models.FoodRestaurant
+      ? applyAggregateRating(
+          mongoose.models.FoodRestaurant,
+          order.restaurantId,
+          dto.restaurantRating,
+        )
+      : Promise.resolve(),
     hasDeliveryPartner
       ? applyAggregateRating(
           FoodDeliveryPartner,
@@ -1085,11 +1095,14 @@ export async function updateOrderInstructions(orderId, userId, instructions) {
   return order;
 }
 
-// ----- Restaurant -----
-export async function listOrdersRestaurant(restaurantId, query) {
+// ----- Admin Kitchen -----
+export async function listOrdersRestaurant(_adminId, query) {
+  const { restaurant } = await getSingleKitchenContext();
+  if (!restaurant?._id) throw new ValidationError('Admin kitchen not found');
+
   const { page, limit, skip } = buildPaginationOptions(query);
   const filter = {
-    restaurantId: new mongoose.Types.ObjectId(restaurantId),
+    restaurantId: new mongoose.Types.ObjectId(restaurant._id),
     $or: [
       { "payment.method": { $in: ["cash", "wallet"] } },
       { "payment.status": { $in: ["paid", "authorized", "captured", "settled", "refunded"] } },
@@ -1111,7 +1124,6 @@ export async function listOrdersRestaurant(restaurantId, query) {
     return o;
   }), total, page, limit });
 }
-
 export async function updateOrderStatusAdmin(
   orderId,
   adminId,
@@ -1139,33 +1151,12 @@ export async function updateOrderStatusAdmin(
 
 export async function updateOrderStatusRestaurant(
   orderId,
-  restaurantId,
+  adminId,
   orderStatus,
   note = ""
 ) {
-  const identity = buildOrderIdentityFilter(orderId);
-  let order = await FoodOrder.findOne({
-    ...identity,
-    restaurantId: new mongoose.Types.ObjectId(restaurantId),
-  });
-  if (!order) throw new NotFoundError("Order not found");
-  
-  const from = order.orderStatus;
-  if (!isStatusAdvance(from, orderStatus)) {
-      throw new ValidationError(`Current order status '${from}' is further ahead than '${orderStatus}'. Order cannot be moved backwards.`);
-  }
-  order.orderStatus = orderStatus;
-  pushStatusHistory(order, {
-    byRole: "RESTAURANT",
-    byId: restaurantId,
-    from,
-    to: orderStatus,
-    note: note || ""
-  });
-  await order.save();
-  return _triggerStatusUpdateSideEffects(order, from, orderStatus, restaurantId);
+  return updateOrderStatusAdmin(orderId, adminId, orderStatus, note);
 }
-
 async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId) {
   const restaurantId = order.restaurantId;
 
@@ -1175,10 +1166,10 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
 
   if (orderStatus === "confirmed") {
     title = "Order Accepted! 🧑‍🍳";
-    body = "The restaurant has accepted your order and is starting to prepare it.";
+    body = "The admin kitchen has accepted your order and is starting to prepare it.";
   } else if (orderStatus === "preparing") {
     title = "Food is being prepared! 🍳";
-    body = "Your food is currently being prepared by the restaurant.";
+    body = "Your food is currently being prepared by the admin kitchen.";
   } else if (orderStatus === "ready_for_pickup") {
     title = "Food is ready! 🛍️";
     body = "Your order is ready and waiting to be picked up.";
@@ -1187,15 +1178,15 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
     const refundDetail = isOnlinePaid ? ` Your refund of ₹${order.pricing.total} is being processed and will be credited to your original payment method within 5-7 working days.` : "";
     
     title = "Order Cancelled ❌";
-    body = `Unfortunately, your order has been cancelled by the restaurant.${refundDetail}`;
+    body = `Unfortunately, your order has been cancelled by the admin kitchen.${refundDetail}`;
   }
 
-  // Real-time: status update to restaurant room.
+  // Real-time: status update to admin kitchen room.
   try {
     const io = getIO();
     if (io) {
       console.log(
-        `[DEBUG] Emitting status update to restaurant ${restaurantId} and user ${order.userId}: ${orderStatus}`,
+        `[DEBUG] Emitting status update to admin and user ${order.userId}: ${orderStatus}`,
       );
       const payload = {
         orderMongoId: order._id?.toString?.(),
@@ -1205,11 +1196,11 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
         message: body,
       };
       
-      const restRoom = rooms.restaurant(restaurantId);
+      const adminRoom = 'admin';
       const userRoom = rooms.user(order.userId);
       
-      console.log(`[DEBUG] Emitting order_status_update to rooms: ${restRoom}, ${userRoom}`);
-      io.to(restRoom).emit("order_status_update", payload);
+      console.log(`[DEBUG] Emitting order_status_update to rooms: ${adminRoom}, ${userRoom}`);
+      io.to(adminRoom).emit("order_status_update", payload);
       io.to(userRoom).emit("order_status_update", payload);
       
       // Notify assigned rider via socket if they exist
@@ -1233,7 +1224,7 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
 
     const notifyList = [
       { ownerType: "USER", ownerId: order.userId },
-      { ownerType: "RESTAURANT", ownerId: restaurantId },
+      { ownerType: "ADMIN", ownerId: actorId },
     ];
 
     const assignedRiderId = order.dispatch?.deliveryPartnerId;
@@ -1253,12 +1244,12 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
         const isOnlinePaid = order.payment.method === "razorpay" && (order.payment.status === "paid" || order.payment.status === "refunded");
         await foodTransactionService.updateTransactionStatus(order._id, 'cancelled_by_restaurant', {
             status: isOnlinePaid ? 'refunded' : 'failed',
-            note: `Order cancelled by restaurant/admin`,
-            recordedByRole: 'RESTAURANT',
-            recordedById: restaurantId
+            note: `Order cancelled by admin kitchen`,
+            recordedByRole: 'ADMIN',
+            recordedById: actorId
         });
       } catch (err) {
-        logger.warn(`updateOrderStatusRestaurant transaction sync failed: ${err?.message || err}`);
+        logger.warn(`updateOrderStatusAdmin transaction sync failed: ${err?.message || err}`);
       }
     }
 
@@ -1278,7 +1269,7 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
       },
     );
   } catch (err) {
-    console.error("[DEBUG] Error emitting status update to restaurant:", err);
+    console.error("[DEBUG] Error emitting status update to admin kitchen:", err);
   }
 
   // Real-time: delivery request / ready notifications.
@@ -1326,7 +1317,10 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
                 const assignedId = order.dispatch?.deliveryPartnerId?.toString?.() || order.dispatch?.deliveryPartnerId;
                 if (assignedId) {
                     console.log(`[DEBUG] Notifying assigned partner ${assignedId} that order is ready.`);
-                    const restaurant = await FoodRestaurant.findById(order.restaurantId).select('restaurantName location addressLine1 area city state').lean();
+                    let restaurant = null;
+                    if (mongoose.models.FoodRestaurant && order.restaurantId) {
+                        restaurant = await mongoose.models.FoodRestaurant.findById(order.restaurantId).select('restaurantName location addressLine1 area city state').lean();
+                    }
                     const payload = await injectAdminBusinessLocation(buildDeliverySocketPayload(order, restaurant));
                     logger.info(
                       `[DeliveryDispatch] Emitting order_ready to ${rooms.delivery(assignedId)} for order ${order._id.toString()}`,
@@ -1341,7 +1335,7 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
         console.error('[DEBUG] Error in delivery notification logic:', err);
     }
 
-    enqueueOrderEvent('restaurant_order_status_updated', {
+    enqueueOrderEvent('admin_kitchen_order_status_updated', {
         orderMongoId: order._id?.toString?.(),
         orderId: order._id.toString(),
         restaurantId,
@@ -1349,8 +1343,8 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
         to: orderStatus
     });
 
-    // ✅ NEW: Automated Razorpay Refund on Restaurant Cancel
-    // Triggers if the restaurant sets status to a cancelled state (e.g., cancelled_by_restaurant)
+    // Automated Razorpay refund on admin kitchen cancel
+    // Triggers if the admin kitchen sets status to a cancelled state
     if (
       String(orderStatus).includes("cancel") &&
       order.payment.status === "paid" &&
@@ -1380,7 +1374,7 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
           };
         }
       } catch (err) {
-        console.error(`Automated refund failed for Order ${order._id.toString()} (Restaurant Cancel):`, err);
+        console.error(`Automated refund failed for Order ${order._id.toString()} (Admin Kitchen Cancel):`, err);
         order.payment.refund = { status: "failed", amount: order.pricing.total };
       }
       // Re-save order with updated payment status
@@ -1392,7 +1386,7 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
       (!order.payment.refund || order.payment.refund.status !== "processed")
     ) {
       try {
-        await userWalletService.refundWalletBalance(order.userId, order.pricing.total, `Refund for order #${order.order_id || order._id} cancelled by restaurant`, { orderId: order._id });
+        await userWalletService.refundWalletBalance(order.userId, order.pricing.total, `Refund for order #${order.order_id || order._id} cancelled by admin kitchen`, { orderId: order._id });
         order.payment.status = "refunded";
         order.payment.refund = {
           status: "processed",
@@ -1414,41 +1408,12 @@ async function _triggerStatusUpdateSideEffects(order, from, orderStatus, actorId
  * Manually re-trigger delivery partner search for a restaurant order.
  * Only allowed if status is preparing/ready and no partner has accepted yet.
  */
-export async function resendDeliveryNotificationRestaurant(orderId, restaurantId) {
-    return dispatchService.resendDeliveryNotificationRestaurant(orderId, restaurantId);
-    const order = await FoodOrder.findOne({
-        _id: new mongoose.Types.ObjectId(orderId),
-        restaurantId: new mongoose.Types.ObjectId(restaurantId)
-    });
-
-    if (!order) throw new NotFoundError('Order not found');
-
-    // Allow resend for fresh confirmed orders too, because this route is often
-    // used right after restaurant confirmation when the first rider alert was missed.
-    const activeStatuses = ['confirmed', 'preparing', 'ready_for_pickup', 'ready'];
-    if (!activeStatuses.includes(order.orderStatus)) {
-        throw new ValidationError(`Cannot resend notification for order in status: ${order.orderStatus}`);
-    }
-
-    // Guard: don't disrupt an active assignment that was already accepted
-    if (order.dispatch?.status === 'accepted') {
-        throw new ValidationError('A delivery partner has already accepted this order.');
-    }
-
-    // Reset dispatch state to unassigned to allow tryAutoAssign to start fresh
-    order.dispatch.status = 'unassigned';
-    order.dispatch.deliveryPartnerId = null;
-    // Clear previously offered partners to give everyone a fresh chance when resending manually.
-    order.dispatch.offeredTo = [];
-    
-    await order.save();
-
-    // Trigger smart dispatch logic immediately
-    await tryAutoAssign(order._id, { manualTrigger: true });
-
-    return { success: true };
+/**
+ * Manually re-trigger delivery partner search for an admin kitchen order.
+ */
+export async function resendDeliveryNotificationRestaurant(orderId, _adminId) {
+    return dispatchService.resendDeliveryNotificationAdmin(orderId);
 }
-
 export async function getCurrentTripDelivery(deliveryPartnerId) {
   return deliveryService.getCurrentTripDelivery(deliveryPartnerId);
 }
@@ -1711,7 +1676,8 @@ export async function assignDeliveryPartnerAdmin(
   // Fallback to primary restaurant if the order has no specific restaurant attached (Central Kitchen Model)
   let restaurantForPayload = populatedOrder?.restaurantId;
   if (!restaurantForPayload) {
-      restaurantForPayload = await FoodRestaurant.findOne({}).lean();
+      const { restaurant } = await getSingleKitchenContext();
+      restaurantForPayload = restaurant || null;
   }
 
   try {
@@ -1779,7 +1745,7 @@ export async function deleteOrderAdmin(orderId, adminId) {
       };
 
       if (order.userId) io.to(rooms.user(order.userId)).emit("order_deleted", payload);
-      if (order.restaurantId) io.to(rooms.restaurant(order.restaurantId)).emit("order_deleted", payload);
+      io.to('admin').emit("order_deleted", payload);
       if (order.dispatch?.deliveryPartnerId) {
         io.to(rooms.delivery(order.dispatch.deliveryPartnerId)).emit("order_deleted", payload);
       }

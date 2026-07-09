@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { upload } from '../../../../middleware/upload.js';
 import {
     listHeroBannersController,
@@ -56,21 +56,6 @@ import { getPublicPageController } from '../../admin/controllers/pageContent.con
 import { getPublicReferralSettingsController } from '../controllers/publicReferralSettings.controller.js';
 import { getAppCustomizationController } from '../../shared/appCustomization.controller.js';
 import {
-    listMealSlotsAdminController,
-    listMealSlotsPublicController,
-    createMealSlotController,
-    updateMealSlotController,
-    deleteMealSlotController,
-    toggleMealSlotStatusController,
-    updateMealSlotOrderController,
-} from '../controllers/mealSlot.controller.js';
-import {
-    listSubscriptionPlansAdminController,
-    createSubscriptionPlanController,
-    updateSubscriptionPlanController,
-    deleteSubscriptionPlanController,
-    toggleSubscriptionPlanStatusController,
-    updateSubscriptionPlanOrderController,
     listSubscriptionPlansPublicController,
 } from '../controllers/subscriptionPlan.controller.js';
 import { getPublicActiveAds } from '../../admin/controllers/appIntroAd.controller.js';
@@ -82,25 +67,9 @@ router.get('/pages/:key', getPublicPageController);
 // Public referral settings (no auth required).
 router.get('/referral-settings', getPublicReferralSettingsController);
 router.get('/app-customization/public', getAppCustomizationController);
-router.get('/meal-slots/public', listMealSlotsPublicController);
+router.get('/subscription-plans', listSubscriptionPlansPublicController);
 router.get('/subscription-plans/public', listSubscriptionPlansPublicController);
 
-
-// Admin meal slots for user subscription flow
-router.get('/meal-slots', listMealSlotsAdminController);
-router.post('/meal-slots', upload.single('image'), createMealSlotController);
-router.patch('/meal-slots/:id', upload.single('image'), updateMealSlotController);
-router.delete('/meal-slots/:id', deleteMealSlotController);
-router.patch('/meal-slots/:id/status', toggleMealSlotStatusController);
-router.patch('/meal-slots/:id/order', updateMealSlotOrderController);
-
-// Admin subscription plans for user subscription flow
-router.get('/subscription-plans', listSubscriptionPlansAdminController);
-router.post('/subscription-plans', createSubscriptionPlanController);
-router.patch('/subscription-plans/:id', updateSubscriptionPlanController);
-router.delete('/subscription-plans/:id', deleteSubscriptionPlanController);
-router.patch('/subscription-plans/:id/status', toggleSubscriptionPlanStatusController);
-router.patch('/subscription-plans/:id/order', updateSubscriptionPlanOrderController);
 
 // Admin hero banner management (DEV: auth temporarily disabled for faster integration)
 router.get('/hero-banners', listHeroBannersController);
@@ -178,6 +147,7 @@ router.get('/hero-banners/landing/settings', getAdminLandingSettingsController);
 router.patch('/hero-banners/landing/settings', updateAdminLandingSettingsController);
 
 export default router;
+
 
 
 

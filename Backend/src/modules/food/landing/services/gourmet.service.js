@@ -1,5 +1,5 @@
 import { FoodGourmetRestaurant } from '../models/gourmetRestaurant.model.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 
 export const getPublicGourmetRestaurants = async () => {
     const docs = await FoodGourmetRestaurant.find({ isActive: true })

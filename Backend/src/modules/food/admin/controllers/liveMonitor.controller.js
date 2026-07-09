@@ -1,4 +1,4 @@
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { FoodDeliveryPartner } from '../../delivery/models/deliveryPartner.model.js';
 import { FoodOrder } from '../../orders/models/order.model.js';
 
@@ -14,7 +14,7 @@ export async function getLiveMonitorStatus(req, res, next) {
 
         // Fetch Outlet Timings for these restaurants
         const restaurantIds = restaurants.map(r => r._id);
-        const { FoodRestaurantOutletTimings } = await import('../../restaurant/models/outletTimings.model.js');
+
         const outletTimings = await FoodRestaurantOutletTimings.find({ restaurantId: { $in: restaurantIds } }).lean();
         const timingsMap = {};
         outletTimings.forEach(t => {

@@ -3,14 +3,19 @@ import { logger } from '../../../../utils/logger.js';
 import {
   sendNotificationToOwner,
   sendNotificationToOwners,
+  notifyAdminsSafely,
 } from "../../../../core/notifications/firebase.service.js";
 import { getIO, rooms } from '../../../../config/socket.js';
 import { addOrderJob } from '../../../../queues/producers/order.producer.js';
 
+import { getSingleKitchenContext } from '../../shared/singleKitchen.service.js';
+
 export async function injectAdminBusinessLocation(data) {
   if (!data) return data;
 
-  const inject = (out) => {
+  let fallbackSettings = null;
+
+  const inject = async (out) => {
     if (!out) return out;
     const source = out.restaurantId || out.restaurant || null;
     const location = source?.location || {};
@@ -40,13 +45,35 @@ export async function injectAdminBusinessLocation(data) {
       }
     }
 
+    if (!out.restaurantLocation || !out.restaurantName || !out.restaurantAddress) {
+      if (!fallbackSettings) {
+         try {
+           fallbackSettings = await getSingleKitchenContext();
+         } catch(e) {}
+      }
+      if (fallbackSettings?.pickupHub) {
+         const hub = fallbackSettings.pickupHub;
+         out.restaurantName = out.restaurantName || hub.name || 'Admin Kitchen';
+         out.restaurantPhone = out.restaurantPhone || hub.phone || '';
+         out.restaurantAddress = out.restaurantAddress || hub.address || '';
+         if (!out.restaurantLocation && hub.location?.coordinates?.length === 2) {
+            out.restaurantLocation = {
+                latitude: Number(hub.location.coordinates[1]),
+                longitude: Number(hub.location.coordinates[0]),
+                address: hub.address || '',
+                area: '', city: '', state: ''
+            };
+         }
+      }
+    }
+
     delete out.restaurantId;
     delete out.restaurant;
     return out;
   };
 
   if (Array.isArray(data)) {
-      return data.map(inject);
+      return Promise.all(data.map(inject));
   }
   return inject(data);
 }
@@ -298,7 +325,7 @@ export function buildDeliverySocketPayload(orderDoc, restaurantDoc = null) {
   };
 }
 
-export function canExposeOrderToRestaurant(orderLike) {
+export function canExposeOrderToKitchen(orderLike) {
   const method = String(orderLike?.payment?.method || "").toLowerCase();
   const status = String(orderLike?.payment?.status || "").toLowerCase();
   if (["cash", "wallet"].includes(method)) return true;
@@ -307,7 +334,7 @@ export function canExposeOrderToRestaurant(orderLike) {
 
 export async function notifyRestaurantNewOrder(orderDoc) {
   try {
-    if (!orderDoc || !canExposeOrderToRestaurant(orderDoc)) return;
+    if (!orderDoc || !canExposeOrderToKitchen(orderDoc)) return;
 
     const io = getIO();
     if (io) {
@@ -317,21 +344,20 @@ export async function notifyRestaurantNewOrder(orderDoc) {
         orderId: orderDoc.order_id || orderDoc._id?.toString?.(),
       };
       logger.info(
-        `[RestaurantOrders] Emitting new_order to ${rooms.restaurant(orderDoc.restaurantId)} for order ${orderDoc._id?.toString?.() || ''}`,
+        `[AdminKitchenOrders] Emitting new_order to admin room for order ${orderDoc._id?.toString?.() || ''}`,
       );
-      io.to(rooms.restaurant(orderDoc.restaurantId)).emit("new_order", payload);
+      io.to('admin').emit("new_order", payload);
     }
 
-    await notifyOwnersSafely(
-      [{ ownerType: "RESTAURANT", ownerId: orderDoc.restaurantId }],
+    await notifyAdminsSafely(
       {
-        title: "New order received",
+        title: "New kitchen order received",
         body: `Order #${orderDoc.order_id || orderDoc._id} is waiting for review.`,
         data: {
           type: "new_order",
           orderId: orderDoc._id.toString(),
           orderMongoId: orderDoc._id?.toString?.() || "",
-          link: `/restaurant/orders/${orderDoc._id?.toString?.() || ""}`,
+          link: `/food/admin/orders/${orderDoc._id?.toString?.() || ""}`,
         },
       },
     );
@@ -377,3 +403,4 @@ export function isStatusAdvance(current, next) {
 
   return nextPrio > currentPrio;
 }
+

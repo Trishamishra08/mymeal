@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { ValidationError, NotFoundError } from '../../../../core/auth/errors.js';
 import { FoodUser } from '../../../../core/users/user.model.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { FoodDeliveryPartner } from '../../delivery/models/deliveryPartner.model.js';
 import { BroadcastNotification } from '../../../../core/notifications/models/notificationBroadcast.model.js';
 import { FoodNotification } from '../../../../core/notifications/models/notification.model.js';
@@ -49,7 +49,7 @@ const normalizeTargetType = (value) => {
 
 const ownerModelMap = {
     USER: FoodUser,
-    RESTAURANT: FoodRestaurant,
+    
     DELIVERY_PARTNER: FoodDeliveryPartner
 };
 
@@ -75,12 +75,7 @@ const modelConfigMap = {
         select: '_id name phone email',
         buildLabel: buildUserLabel
     },
-    RESTAURANT: {
-        model: FoodRestaurant,
-        query: { status: 'approved' },
-        select: '_id restaurantName ownerName ownerPhone ownerEmail',
-        buildLabel: buildRestaurantLabel
-    },
+
     DELIVERY_PARTNER: {
         model: FoodDeliveryPartner,
         query: { status: 'approved' },

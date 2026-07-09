@@ -10,7 +10,7 @@ const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
 
-export default function Orders() {
+export default function SubscriptionOrders() {
   const navigate = useNavigate()
   const { replaceCart } = useCart()
   const [orders, setOrders] = useState([])
@@ -193,7 +193,7 @@ export default function Orders() {
       const firstResponse = await orderAPI.getOrders({
         limit: FETCH_LIMIT,
         page: 1,
-        excludeSubscriptions: true
+        onlySubscriptions: true
       })
 
       // Check multiple possible response structures
@@ -219,7 +219,7 @@ export default function Orders() {
 
       const pagePromises = []
       for (let p = 2; p <= totalPages; p += 1) {
-        pagePromises.push(orderAPI.getOrders({ limit: FETCH_LIMIT, page: p, excludeSubscriptions: true }))
+        pagePromises.push(orderAPI.getOrders({ limit: FETCH_LIMIT, page: p, onlySubscriptions: true }))
       }
 
       const pageResponses = await Promise.all(pagePromises)
@@ -360,7 +360,7 @@ export default function Orders() {
         debugError('Error fetching user orders:', error)
         let errorMessage = 'Failed to load orders'
         if (error?.response?.status === 401) {
-          errorMessage = 'Please login to view your orders'
+          errorMessage = 'Please login to view Subscription Deliveries'
         } else if (error?.response?.data?.message) {
           errorMessage = error.response.data.message
         }
@@ -387,12 +387,8 @@ export default function Orders() {
     const date = new Date(dateString)
     const day = date.getDate().toString().padStart(2, '0')
     const month = date.toLocaleDateString('en-US', { month: 'short' })
-    const hours = date.getHours()
-    const minutes = date.getMinutes().toString().padStart(2, '0')
-    const ampm = hours >= 12 ? 'PM' : 'AM'
-    const displayHours = hours % 12 || 12
-
-    return `${day} ${month}, ${displayHours}:${minutes}${ampm}`
+    
+    return `${day} ${month} ${date.getFullYear()}`
   }
 
   // Filter orders based on search query and active tab
@@ -692,7 +688,7 @@ Order again from this restaurant in the ${companyName} app.`
           <Link to="/user">
             <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-gray-300 cursor-pointer" />
           </Link>
-          <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-gray-100">Your Orders</h1>
+          <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-gray-100">Subscription Deliveries</h1>
         </div>
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -708,7 +704,7 @@ Order again from this restaurant in the ${companyName} app.`
           <Link to="/user">
             <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-gray-300 cursor-pointer" />
           </Link>
-          <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-gray-100">Your Orders</h1>
+          <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-gray-100">Subscription Deliveries</h1>
         </div>
         <div className="px-4 py-8 text-center text-gray-600 dark:text-gray-400">
           <p>You haven't placed any orders yet</p>
@@ -727,7 +723,7 @@ Order again from this restaurant in the ${companyName} app.`
         <Link to="/user">
           <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-gray-300 cursor-pointer" />
         </Link>
-        <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-gray-100">Your Orders</h1>
+        <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-gray-100">Subscription Deliveries</h1>
       </div>
 
       {/* Search Bar */}
@@ -915,12 +911,7 @@ Order again from this restaurant in the ${companyName} app.`
                                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{item.description}</p>
                                 )}
                               </div>
-                              <div className="text-right flex-shrink-0">
-                                <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-100">{"\u20B9"}{itemTotal.toFixed(2)}</span>
-                                {itemQuantity > 1 && (
-                                  <p className="hidden sm:block text-[10px] text-gray-500 dark:text-gray-400">{"\u20B9"}{itemPrice.toFixed(2)} each</p>
-                                )}
-                              </div>
+
                             </div>
                           </div>
                         </div>
@@ -931,47 +922,7 @@ Order again from this restaurant in the ${companyName} app.`
                   )}
                 </div>
 
-                {/* Order Summary Section */}
-                <div className="px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 dark:bg-[#1a1a1a] rounded-lg mx-3 sm:mx-4 mb-2">
-                  <div className="space-y-1">
-                    {order.subtotal > 0 && (
-                      <div className="hidden sm:flex justify-between text-xs">
-                        <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
-                        <span className="text-gray-800 dark:text-gray-200 font-medium">{"\u20B9"}{order.subtotal.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {order.deliveryFee > 0 && (
-                      <div className="hidden sm:flex justify-between text-xs">
-                        <span className="text-gray-600 dark:text-gray-400">Delivery Fee</span>
-                        <span className="text-gray-800 dark:text-gray-200 font-medium">{"\u20B9"}{order.deliveryFee.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {order.tax > 0 && (
-                      <div className="hidden sm:flex justify-between text-xs">
-                        <span className="text-gray-600 dark:text-gray-400">Tax</span>
-                        <span className="text-gray-800 dark:text-gray-200 font-medium">{"\u20B9"}{order.tax.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {order.pricing?.discount > 0 && (
-                      <div className="flex justify-between text-[11px] sm:text-xs">
-                        <span className="text-green-600">Discount Applied</span>
-                        <span className="text-green-600 font-medium">-{"\u20B9"}{order.pricing.discount.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {order.pricing?.couponCode && (
-                      <div className="hidden sm:flex justify-between text-xs">
-                        <span className="text-gray-600">Coupon</span>
-                        <span className="text-gray-800 font-medium">{order.pricing.couponCode}</span>
-                      </div>
-                    )}
-                    <div className="sm:border-t border-gray-200 dark:border-gray-700 sm:pt-1.5 sm:mt-1.5">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200">Total Bill</span>
-                        <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">{"\u20B9"}{order.total.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+
 
                 {/* Date and Payment Info */}
                 <div className="px-4 py-2 flex items-center justify-between">
@@ -980,25 +931,8 @@ Order again from this restaurant in the ${companyName} app.`
                     {order.deliveredAt && (
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Delivered on {formatDate(order.deliveredAt)}</p>
                     )}
-                    {order.payment && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Payment: <span className="font-medium capitalize text-gray-800 dark:text-gray-200">
-                          {order.payment.method === 'cash' || order.payment.method === 'cod' ? 'Cash on Delivery' :
-                            order.payment.method === 'wallet' ? 'Wallet' :
-                              order.payment.method === 'razorpay' ? 'Online' :
-                                order.payment.method || 'N/A'}
-                        </span>
-                        {order.payment.status && (
-                          <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium ${(order.payment.status === 'completed' || (isDelivered && isCodOrWallet)) ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                              order.payment.status === 'failed' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' :
-                                (order.payment.status === 'pending' || order.payment.status === 'cod_pending') ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
-                                  'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                            }`}>
-                            {(isDelivered && isCodOrWallet) ? 'Paid' : order.payment.status}
-                          </span>
-                        )}
-                      </p>
-                    )}
+                  </div>
+                  <div className="text-right">
                     {isDelivered && !paymentFailed && (
                       <p className="text-xs font-medium text-green-600 mt-1">Delivered</p>
                     )}
@@ -1020,14 +954,7 @@ Order again from this restaurant in the ${companyName} app.`
                       <p className="text-xs font-medium text-gray-500 mt-1">Cancelled</p>
                     )}
                   </div>
-                  <div className="flex items-center ml-4">
-                    <Link to={(isDelivered || isCancelled) ? `/user/orders/${order.id}/details` : `/user/orders/${order.id}`}>
-                      <button className="text-xs text-primary font-medium hover:text-secondary flex items-center gap-1">
-                        View Details
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </Link>
-                  </div>
+
                 </div>
 
                 {/* Separator */}
@@ -1113,16 +1040,13 @@ Order again from this restaurant in the ${companyName} app.`
                     </div>
                   )}
 
-                  {/* Right Side: Reorder Button */}
-                  {isDelivered && !paymentFailed && (
-                    <button
-                      onClick={() => handleReorder(order)}
-                      className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1 shadow-sm transition-colors"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      Reorder
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Link to={`/user/orders/${order.id}`}>
+                      <button className="bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-colors">
+                        Details <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             )

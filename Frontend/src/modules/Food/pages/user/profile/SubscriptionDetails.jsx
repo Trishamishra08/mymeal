@@ -53,13 +53,16 @@ export default function SubscriptionDetails() {
   const [addonSelections, setAddonSelections] = useState({});
   const [savingAddon, setSavingAddon] = useState(false);
 
+  const [activeDeliveryOrder, setActiveDeliveryOrder] = useState(null);
+
   const loadDetails = async () => {
     setLoading(true);
     try {
-      const [subscriptionResponse, scheduleResponse, menuResponse] = await Promise.all([
+      const [subscriptionResponse, scheduleResponse, menuResponse, ordersResponse] = await Promise.all([
         subscriptionAPI.getMySubscriptions(),
         subscriptionAPI.getUpcomingSchedules().catch(() => null),
         orderAPI.getOneTimeTiffinMenu().catch(() => null),
+        orderAPI.getOrders({ limit: 50, page: 1 }).catch(() => null),
       ]);
 
       const list =
@@ -88,6 +91,46 @@ export default function SubscriptionDetails() {
       if (upcomingSchedules.length > 0) {
         setSelections(upcomingSchedules[0].selections || {});
       }
+
+      // Find active daily delivery order for this subscription
+      let orders = [];
+      if (ordersResponse?.data?.success && ordersResponse?.data?.data?.orders) {
+        orders = ordersResponse.data.data.orders;
+      } else if (ordersResponse?.data?.orders) {
+        orders = ordersResponse.data.orders;
+      } else if (Array.isArray(ordersResponse?.data?.data)) {
+        orders = ordersResponse.data.data;
+      }
+      
+      const activeDelivery = orders.find(o => {
+        if (o.orderType !== 'subscription') return false;
+        
+        const orderSubId = String(
+          o.subscriptionUsage?.subscriptionId?._id || 
+          o.subscriptionUsage?.subscriptionId || 
+          o.subscriptionId?._id || 
+          o.subscriptionId || 
+          o.subscription || ''
+        );
+        if (orderSubId !== String(subscriptionId)) return false;
+        
+        const status = String(o.status || '').toLowerCase();
+        const phase = String(o.orderPhase || '').toLowerCase();
+        
+        // Exclude completed or cancelled orders
+        if (['delivered', 'cancelled', 'dead', 'failed'].includes(status) || ['delivered', 'completed'].includes(phase)) return false;
+
+        // Ensure it's assigned or dispatched
+        const isDispatched = ['ready_for_pickup', 'out_for_delivery', 'en_route_to_delivery', 'at_pickup', 'at_drop', 'picked_up'].includes(status);
+        const hasDeliveryPartner = Boolean(o.dispatch?.deliveryPartnerId || o.deliveryPartnerId);
+        
+        console.log('Order check:', { id: o._id, type: o.orderType, subId: o.subscriptionId, status, phase, isDispatched, hasDeliveryPartner });
+
+        return isDispatched || hasDeliveryPartner;
+      });
+      console.log('activeDelivery found:', activeDelivery);
+      setActiveDeliveryOrder(activeDelivery || null);
+
     } catch {
       setSubscription(null);
       setSchedules([]);
@@ -102,8 +145,14 @@ export default function SubscriptionDetails() {
   }, [subscriptionId]);
 
   const nextSchedule = useMemo(() => schedules[0] || null, [schedules]);
-  const mealsLeft = Math.max(0, (subscription?.planDays || 30) - (subscription?.usedCredits || 0));
-  const progressPercent = Math.round((mealsLeft / (subscription?.planDays || 30)) * 100);
+  const planDays = subscription?.durationDays || subscription?.planDays || 0;
+  let mealsLeft = planDays;
+  if (subscription?.status === 'active' && subscription?.remainingDays !== undefined) {
+    mealsLeft = Math.min(planDays, subscription.remainingDays);
+  } else if (subscription?.status === 'expired' || subscription?.status === 'cancelled') {
+    mealsLeft = 0;
+  }
+  const progressPercent = planDays > 0 ? Math.round((mealsLeft / planDays) * 100) : 0;
 
   if (loading) {
     return (
@@ -142,34 +191,61 @@ export default function SubscriptionDetails() {
         </div>
 
         <div className="space-y-4">
+          {/* Active Delivery Tracking Card */}
+          {activeDeliveryOrder && (
+            <div 
+              onClick={() => navigate(`/user/food/orders/tracking/${activeDeliveryOrder.orderId || activeDeliveryOrder.id || activeDeliveryOrder._id}`)}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[20px] p-4 text-white shadow-lg cursor-pointer transform transition-transform active:scale-95 flex items-center justify-between"
+            >
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-100 mb-1">Today's Delivery</p>
+                <h3 className="font-bold text-base md:text-lg">Track Live Delivery</h3>
+                <p className="text-xs text-blue-50 mt-0.5 opacity-90 capitalize">
+                  {String(activeDeliveryOrder.status || '').replace(/_/g, ' ')}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm shadow-inner">
+                <MapPin className="h-5 w-5 text-white animate-bounce" />
+              </div>
+            </div>
+          )}
+
           {/* Current Plan Card */}
           <Card className="rounded-[20px] border-0 bg-white shadow-sm dark:bg-[#151f1a]">
-            <CardContent className="p-5 flex items-center justify-between">
-               <div>
+            <CardContent className="p-5">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Current Plan</p>
-                  <h2 className="text-xl font-extrabold text-green-700 dark:text-green-500 mt-1">{subscription.planTitle || "Standard Plan"}</h2>
+                  <h2 className="text-xl font-extrabold text-green-700 dark:text-green-500 mt-1">{subscription.planName || subscription.planTitle || "Standard Plan"}</h2>
                   <div className="mt-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-bold text-green-700 dark:bg-green-900/40 dark:text-green-400">
                     Active
                   </div>
-               </div>
-               <div className="flex gap-6 text-right">
-                  <div>
+                </div>
+
+                <div className="h-px w-full bg-gray-100 dark:bg-gray-800 md:hidden"></div>
+
+                <div className="flex flex-row items-center justify-between md:justify-end gap-4 sm:gap-6 w-full md:w-auto">
+                  <div className="text-left md:text-right flex-1 md:flex-none">
                     <p className="text-xs font-semibold text-gray-500 uppercase">Plan Duration</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-1">{formatDate(subscription.startDate)} - {formatDate(subscription.endDate)}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{subscription.planDays} Days</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-1 truncate max-w-[130px] sm:max-w-none">{formatDate(subscription.startDate)} - {formatDate(subscription.endDate)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{subscription.durationDays || subscription.planDays || 0} Days</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  
+                  <div className="h-10 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block"></div>
+                  
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                     <div className="text-right">
                       <p className="text-xs font-semibold text-gray-500 uppercase">Meals Left</p>
-                      <p className="text-lg font-extrabold text-green-700 dark:text-green-500 mt-0.5">{mealsLeft} <span className="text-sm text-gray-400 font-semibold">/ {subscription.planDays}</span></p>
+                      <p className="text-lg font-extrabold text-green-700 dark:text-green-500 mt-0.5">{mealsLeft} <span className="text-sm text-gray-400 font-semibold">/ {subscription.durationDays || subscription.planDays || 0}</span></p>
                       <p className="text-xs text-gray-500 mt-0.5">Meals</p>
                     </div>
                     {/* Fake progress circle for demo */}
-                    <div className="relative h-14 w-14 rounded-full border-4 border-green-600 flex items-center justify-center">
-                       <span className="text-sm font-bold text-green-700 dark:text-green-500">{progressPercent}%</span>
+                    <div className="relative h-11 w-11 shrink-0 rounded-full border-[3px] border-green-600 flex items-center justify-center">
+                       <span className="text-[11px] font-bold text-green-700 dark:text-green-500">{progressPercent}%</span>
                     </div>
                   </div>
-               </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -197,7 +273,7 @@ export default function SubscriptionDetails() {
                      <span className="flex h-4 w-4 items-center justify-center rounded border border-green-600">
                         <span className="h-2 w-2 rounded-full bg-green-600"></span>
                      </span>
-                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">{nextSchedule?.dishName || subscription.dishName || "Veg Thali"}</h3>
+                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">{nextSchedule?.dishName || subscription.planName || subscription.dishName || "Veg Thali"}</h3>
                    </div>
                    
                    {!isEditingItems && (

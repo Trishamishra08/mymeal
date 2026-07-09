@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { Transaction } from './models/transaction.model.js';
 import { FoodUserWallet } from '../../modules/food/user/models/userWallet.model.js';
-import { FoodRestaurantWallet } from '../../modules/food/restaurant/models/restaurantWallet.model.js';
+
 import { FoodDeliveryWallet } from '../../modules/food/delivery/models/deliveryWallet.model.js';
 import { FoodAdminWallet } from '../../modules/food/admin/models/adminWallet.model.js';
 import { logger } from '../../utils/logger.js';

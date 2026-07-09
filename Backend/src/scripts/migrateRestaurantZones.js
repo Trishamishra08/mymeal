@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-import { FoodRestaurant } from '../modules/food/restaurant/models/restaurant.model.js';
+
 import { FoodZone } from '../modules/food/admin/models/zone.model.js';
 
 // Ray-Casting algorithm to check if a point is inside a polygon

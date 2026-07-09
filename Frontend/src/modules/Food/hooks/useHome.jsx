@@ -189,7 +189,13 @@ export const useHome = ({ effectiveLocation, effectiveZoneId, hasUsableUserCity 
         if (cancelled) return;
         const data = response?.data?.data;
         const list = Array.isArray(data?.banners) ? data.banners : Array.isArray(data) ? data : [];
-        const images = list.map((b) => (b && typeof b.imageUrl === "string" ? b.imageUrl : "")).filter(Boolean);
+        let images = list.map((b) => (b && typeof b.imageUrl === "string" ? b.imageUrl : "")).filter(Boolean);
+        
+        // Provide fallback banner if none are active in DB
+        if (images.length === 0) {
+          images = ["/src/modules/Food/assets/offerimage.png"];
+        }
+        
         setHeroBannerImages(images);
         setHeroBannersData(list);
       })

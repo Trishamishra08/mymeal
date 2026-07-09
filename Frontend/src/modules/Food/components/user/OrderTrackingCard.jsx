@@ -90,6 +90,16 @@ const isActiveOrder = (order) => {
   if (TERMINAL_STATUSES.has(status)) return false;
   if (phase === "completed" || phase === "delivered") return false;
 
+  // For subscription orders, ONLY show tracking if a delivery partner is assigned
+  // or it has been dispatched from the admin kitchen
+  if (order.orderType === 'subscription') {
+    const isDispatched = ['ready_for_pickup', 'out_for_delivery', 'en_route_to_delivery', 'at_pickup', 'at_drop', 'picked_up'].includes(status);
+    const hasDeliveryPartner = Boolean(order.dispatch?.deliveryPartnerId || order.deliveryPartnerId);
+    if (!isDispatched && !hasDeliveryPartner) {
+      return false;
+    }
+  }
+
   // Don't show live tracker for scheduled orders that haven't started yet
   // They stay in 'confirmed' status until the restaurant starts preparing them.
   if (order.scheduledAt && (status === "confirmed" || status === "created" || status === "pending")) {

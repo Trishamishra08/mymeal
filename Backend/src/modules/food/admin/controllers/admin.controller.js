@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import * as adminService from '../services/admin.service.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { validateCategoryListQuery, validateCategoryRejectDto, validateCategoryUpsertDto } from '../validators/category.validator.js';
 import { validateCreateOfferDto, validateUpdateOfferCartVisibilityDto } from '../validators/offer.validator.js';
 import { validateAddDeliveryBonusDto } from '../validators/deliveryBonus.validator.js';
@@ -1657,7 +1657,7 @@ export async function getSidebarBadges(req, res, next) {
 
 export async function getExpiredFssaiNotifications(req, res, next) {
     try {
-        const { listExpiredFssaiRestaurants } = await import('../../restaurant/services/fssaiExpiry.service.js');
+
         const items = await listExpiredFssaiRestaurants();
         res.status(200).json({
             success: true,

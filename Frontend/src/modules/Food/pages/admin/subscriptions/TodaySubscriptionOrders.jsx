@@ -122,7 +122,7 @@ export default function TodaySubscriptionOrders() {
                 {filteredMeals.map((meal) => {
                   const sub = meal.subscriptionId || {};
                   const address = sub.deliveryAddress || {};
-                  const isSkipped = meal.status === "skipped";
+                  const isSkipped = meal.isSkipped || meal.fulfillmentStatus === "skipped";
                   const hasAddons = meal.addOnTiffins && meal.addOnTiffins.length > 0;
                   const isCustomizedDish = meal.dishChange && meal.dishChange.originalDishId;
                   const hasItemSelections = meal.selections && Object.keys(meal.selections).length > 0;
@@ -166,7 +166,7 @@ export default function TodaySubscriptionOrders() {
                           <Badge variant="destructive">Skipped</Badge>
                         ) : (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 capitalize">
-                            {meal.status.replace(/_/g, ' ')}
+                            {(meal.fulfillmentStatus || 'unknown').replace(/_/g, ' ')}
                           </Badge>
                         )}
                       </td>
@@ -180,7 +180,7 @@ export default function TodaySubscriptionOrders() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {!isSkipped && meal.status === "scheduled" ? (
+                          {!isSkipped && (meal.fulfillmentStatus === "pending" || meal.order?.dispatch?.status === "unassigned") ? (
                             <Button 
                               onClick={() => handleManualAssign(meal)} 
                               size="sm"
@@ -210,7 +210,7 @@ export default function TodaySubscriptionOrders() {
               Subscription Meal Details
               <div className="text-xs text-gray-500 font-normal mt-1 flex items-center gap-2">
                 ID: {selectedMeal?._id}
-                <Badge variant="outline" className="bg-gray-50">{selectedMeal?.status}</Badge>
+                <Badge variant="outline" className="bg-gray-50">{selectedMeal?.fulfillmentStatus}</Badge>
               </div>
             </DialogTitle>
           </DialogHeader>
@@ -242,7 +242,7 @@ export default function TodaySubscriptionOrders() {
                   <div className="flex items-center gap-2 mb-3">
                     <Utensils className="h-4 w-4 text-[#55254b]" />
                     <span className="font-semibold text-gray-900">{selectedMeal.dishName}</span>
-                    {selectedMeal.status === "skipped" && <Badge variant="destructive" className="ml-2">Skipped</Badge>}
+                    {selectedMeal.isSkipped && <Badge variant="destructive" className="ml-2">Skipped</Badge>}
                   </div>
                   
                   {selectedMeal.dishChange?.originalDishId && (
@@ -331,7 +331,7 @@ export default function TodaySubscriptionOrders() {
                 <div className="text-sm flex flex-col gap-2">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Status:</span>
-                    <span className="font-medium capitalize">{selectedMeal.status.replace(/_/g, ' ')}</span>
+                    <span className="font-medium capitalize">{(selectedMeal.fulfillmentStatus || 'unknown').replace(/_/g, ' ')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Service Date:</span>

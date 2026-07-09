@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { FoodOrder } from '../models/order.model.js';
 import { FoodOfferUsage } from '../../admin/models/offerUsage.model.js';
 import { FoodFeeSettings } from '../../admin/models/feeSettings.model.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { FoodOffer } from '../../admin/models/offer.model.js';
 import { MyMealDailyMenu } from '../../admin/models/dailyMenu.model.js';
 import { MyMealMenuCategory } from '../../admin/models/menuCategory.model.js';

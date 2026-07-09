@@ -1,7 +1,6 @@
 import express from 'express';
 import authRoutes from '../core/auth/auth.routes.js';
 import deliveryRoutes from '../modules/food/delivery/routes/delivery.routes.js';
-import restaurantRoutes from '../modules/food/restaurant/routes/restaurant.routes.js';
 import landingRoutes from '../modules/food/landing/routes/landing.routes.js';
 import subscriptionUserRoutes from '../modules/food/subscription/routes/subscription.routes.user.js';
 import { getPublicDiningCategories, getPublicDiningRestaurants, getPublicRestaurantOccupiedSeats } from '../modules/food/dining/controllers/diningPublic.controller.js';
@@ -25,6 +24,14 @@ import promocodeRoutes from './promocodeRoutes.js';
 import { requireZone } from '../middlewares/zone.middleware.js';
 import envSettingRoutes from './admin/envSettingRoutes.js';
 import { listPublicMenuCategories } from '../modules/food/admin/controllers/menuManagement.controller.js';
+import {
+    listSubscriptionPlansPublicController,
+    createSubscriptionPlanController,
+    updateSubscriptionPlanController,
+    deleteSubscriptionPlanController,
+    toggleSubscriptionPlanStatusController,
+    updateSubscriptionPlanOrderController,
+} from '../modules/food/landing/controllers/subscriptionPlan.controller.js';
 
 const router = express.Router();
 
@@ -44,11 +51,16 @@ router.use('/v1/food/auth', authRoutes);
 // Backward-compatible auth routes
 router.use('/v1/auth', authRoutes);
 router.use('/v1/food/delivery', deliveryRoutes);
-router.use('/v1/food/restaurant', restaurantRoutes);
 router.use('/v1/food', landingRoutes);
 router.use('/v1/food/search', searchRoutes);
 router.use('/v1/food/subscriptions', authMiddleware, requireRoles('USER'), subscriptionUserRoutes);
 router.use('/v1/food/promocodes', promocodeRoutes);
+router.get('/v1/food/subscription-plans', listSubscriptionPlansPublicController);
+router.post('/v1/food/subscription-plans', authMiddleware, requireRoles('ADMIN', 'SUPER_ADMIN'), createSubscriptionPlanController);
+router.patch('/v1/food/subscription-plans/:id', authMiddleware, requireRoles('ADMIN', 'SUPER_ADMIN'), updateSubscriptionPlanController);
+router.delete('/v1/food/subscription-plans/:id', authMiddleware, requireRoles('ADMIN', 'SUPER_ADMIN'), deleteSubscriptionPlanController);
+router.patch('/v1/food/subscription-plans/:id/status', authMiddleware, requireRoles('ADMIN', 'SUPER_ADMIN'), toggleSubscriptionPlanStatusController);
+router.patch('/v1/food/subscription-plans/:id/order', authMiddleware, requireRoles('ADMIN', 'SUPER_ADMIN'), updateSubscriptionPlanOrderController);
 router.get('/v1/food/dining/categories/public', getPublicDiningCategories);
 router.get('/v1/food/menu-management/categories/public', listPublicMenuCategories);
 router.get('/v1/food/orders/one-time-tiffin/menu/public', getOneTimeTiffinMenuController);
@@ -59,8 +71,8 @@ router.get('/v1/food/dining/restaurants/:restaurantId/occupied-seats/public', ge
 router.post('/v1/food/dining/bookings', authMiddleware, requireRoles('USER'), createBooking);
 router.get('/v1/food/dining/bookings/my', authMiddleware, requireRoles('USER'), getMyBookings);
 router.post('/v1/food/dining/bookings/:bookingId/review', authMiddleware, requireRoles('USER'), createReview);
-router.get('/v1/food/dining/bookings/restaurant/:restaurantId', authMiddleware, requireRoles('RESTAURANT', 'ADMIN'), getRestaurantBookings);
-router.patch('/v1/food/dining/bookings/:bookingId/status', authMiddleware, requireRoles('RESTAURANT', 'ADMIN'), updateBookingStatus);
+router.get('/v1/food/dining/bookings/restaurant/:restaurantId', authMiddleware, requireRoles('ADMIN'), getRestaurantBookings);
+router.patch('/v1/food/dining/bookings/:bookingId/status', authMiddleware, requireRoles('ADMIN'), updateBookingStatus);
 
 router.use('/v1/uploads', uploadRoutes);
 
@@ -70,7 +82,7 @@ router.get('/v1/food/admin/business-settings/public', businessSettingsController
 router.use('/v1/food/admin/env', envSettingRoutes);
 router.use('/v1/food/admin', authMiddleware, requireRoles('ADMIN'), restaurantAdminRoutes);
 router.use('/v1/food/user', authMiddleware, requireRoles('USER'), userRoutes);
-router.use('/v1/food/notifications', authMiddleware, requireRoles('USER', 'RESTAURANT', 'DELIVERY_PARTNER'), notificationRoutes);
+router.use('/v1/food/notifications', authMiddleware, requireRoles('USER', 'DELIVERY_PARTNER', 'ADMIN'), notificationRoutes);
 router.use('/v1/food/orders', authMiddleware, requireRoles('USER'), orderUserRoutes);
 router.use('/v1/food/payments', authMiddleware, paymentRoutes);
 router.use('/v1/payments/webhook', webhookRoutes);

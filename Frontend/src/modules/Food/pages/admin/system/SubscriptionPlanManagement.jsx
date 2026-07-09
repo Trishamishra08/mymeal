@@ -53,7 +53,7 @@ const getDeliveryText = (plan) => {
 
 const buildFormFromPlan = (plan, duplicate = false) => ({
   id: duplicate ? "" : getPlanId(plan),
-  title: duplicate ? `${plan.title || "Plan"} Copy` : plan.title || "",
+  title: duplicate ? `${plan.name || "Plan"} Copy` : plan.name || "",
   planType: plan.planType || "Weekly",
   durationDays: plan.durationDays || "",
   price: plan.price || "",
@@ -61,12 +61,12 @@ const buildFormFromPlan = (plan, duplicate = false) => ({
   dailyTiffinQuantity: plan.dailyTiffinQuantity || "1",
   deliveryFrom: plan.deliveryTime?.from || "",
   deliveryTo: plan.deliveryTime?.to || "",
-  allowMealCustomization: Boolean(plan.allowMealCustomization),
+  allowMealCustomization: Boolean(plan.enableMealCustomization),
   customizationCutoffTime: plan.customizationCutoffTime || "",
-  allowSkipDelivery: Boolean(plan.allowSkipDelivery),
-  allowAddOnTiffin: Boolean(plan.allowAddOnTiffin),
-  isActive: plan.isActive !== false,
-  sortOrder: plan.order ?? plan.sortOrder ?? "0",
+  allowSkipDelivery: Boolean(plan.enableSkipDelivery),
+  allowAddOnTiffin: Boolean(plan.enableAddOnTiffin),
+  isActive: plan.status !== "inactive",
+  sortOrder: plan.order ?? plan.displayOrder ?? "0",
   description: plan.description || "",
 });
 
@@ -80,7 +80,7 @@ const validateForm = (form, plans) => {
   if (!form.deliveryFrom || !form.deliveryTo) errors.deliveryTime = "Delivery time is required";
   const duplicate = plans.some((plan) => {
     if (getPlanId(plan) === form.id) return false;
-    return String(plan.title || "").trim().toLowerCase() === name.toLowerCase();
+    return String(plan.name || "").trim().toLowerCase() === name.toLowerCase();
   });
   if (duplicate) errors.title = "Duplicate plan names are not allowed";
   return errors;
@@ -116,7 +116,9 @@ export default function SubscriptionPlanManagement() {
 
   const authConfig = useMemo(() => {
     const token = getModuleToken("admin");
-    return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+    return token
+      ? { contextModule: "admin", headers: { Authorization: `Bearer ${token}` } }
+      : { contextModule: "admin" };
   }, []);
 
   const formErrors = useMemo(() => validateForm(form, plans), [form, plans]);
@@ -171,7 +173,7 @@ export default function SubscriptionPlanManagement() {
 
     setSaving(true);
     const payload = {
-      title: form.title.trim(),
+      name: form.title.trim(),
       planType: form.planType,
       durationDays: Number(form.durationDays),
       price: Number(form.price),
@@ -181,12 +183,12 @@ export default function SubscriptionPlanManagement() {
         from: form.deliveryFrom,
         to: form.deliveryTo,
       },
-      allowMealCustomization: form.allowMealCustomization,
+      enableMealCustomization: form.allowMealCustomization,
       customizationCutoffTime: form.allowMealCustomization ? form.customizationCutoffTime : "",
-      allowSkipDelivery: form.allowSkipDelivery,
-      allowAddOnTiffin: form.allowAddOnTiffin,
-      isActive: form.isActive,
-      sortOrder: Number(form.sortOrder || 0),
+      enableSkipDelivery: form.allowSkipDelivery,
+      enableAddOnTiffin: form.allowAddOnTiffin,
+      status: form.isActive ? "active" : "inactive",
+      displayOrder: Number(form.sortOrder || 0),
       description: form.description,
     };
 
@@ -212,7 +214,7 @@ export default function SubscriptionPlanManagement() {
 
   const deletePlan = async (plan) => {
     const id = getPlanId(plan);
-    if (!id || !window.confirm(`Delete ${plan.title}?`)) return;
+    if (!id || !window.confirm(`Delete ${plan.name || plan.title}?`)) return;
     try {
       await api.delete(`/food/subscription-plans/${id}`, authConfig);
       setMessage("Subscription plan deleted");
@@ -230,7 +232,7 @@ export default function SubscriptionPlanManagement() {
     if (!id) return;
     try {
       await api.patch(`/food/subscription-plans/${id}/status`, {}, authConfig);
-      toast.success(plan.isActive ? "Plan deactivated" : "Plan activated");
+      toast.success(plan.status === "active" ? "Plan deactivated" : "Plan activated");
       await loadPlans();
     } catch (err) {
       const nextError = err?.response?.data?.message || "Failed to update status";
@@ -402,18 +404,18 @@ export default function SubscriptionPlanManagement() {
                   <article key={getPlanId(plan)} className="rounded-xl border border-red-100 bg-white p-5 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="text-2xl font-black text-slate-950">{plan.title}</h3>
+                        <h3 className="text-2xl font-black text-slate-950">{plan.name || plan.title}</h3>
                         <div className="mt-2 flex flex-wrap gap-2">
                           <p className="inline-flex rounded-full bg-red-50 px-3 py-1 text-xs font-black uppercase tracking-wider text-[#ef2b24]">
                             {Number(plan.durationDays || 0)} days
                           </p>
                           <p className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-slate-600">
-                            {plan.planType || "Weekly"}
+                            {plan.durationDays ? `${plan.durationDays} Days` : "Plan"}
                           </p>
                         </div>
                       </div>
-                      <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${plan.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                        {plan.isActive ? "Active" : "Inactive"}
+                      <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${plan.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                        {plan.status === "active" ? "Active" : "Inactive"}
                       </span>
                     </div>
 
@@ -437,10 +439,10 @@ export default function SubscriptionPlanManagement() {
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-                      {plan.allowMealCustomization && <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-[#ef2b24]">Customization</span>}
-                      {plan.allowSkipDelivery && <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-[#ef2b24]">Skip</span>}
-                      {plan.allowAddOnTiffin && <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-[#ef2b24]">Add-On</span>}
-                      {!plan.allowMealCustomization && !plan.allowSkipDelivery && !plan.allowAddOnTiffin && <span className="text-sm font-semibold text-slate-400">No optional features enabled</span>}
+                      {plan.enableMealCustomization && <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-[#ef2b24]">Customization</span>}
+                      {plan.enableSkipDelivery && <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-[#ef2b24]">Skip</span>}
+                      {plan.enableAddOnTiffin && <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-[#ef2b24]">Add-On</span>}
+                      {!plan.enableMealCustomization && !plan.enableSkipDelivery && !plan.enableAddOnTiffin && <span className="text-sm font-semibold text-slate-400">No optional features enabled</span>}
                     </div>
 
                     {plan.description && <p className="mt-3 text-sm text-slate-500">{plan.description}</p>}
@@ -448,7 +450,7 @@ export default function SubscriptionPlanManagement() {
                     <div className="mt-4 flex items-center justify-end gap-2">
                       <button type="button" title="Edit" onClick={() => editPlan(plan)} className="rounded-lg border border-slate-200 p-2 text-slate-600"><Pencil className="h-4 w-4" /></button>
                       <button type="button" title="Duplicate" onClick={() => duplicatePlan(plan)} className="rounded-lg border border-slate-200 p-2 text-slate-600"><Copy className="h-4 w-4" /></button>
-                      <button type="button" title={plan.isActive ? "Deactivate" : "Activate"} onClick={() => togglePlan(plan)} className={`rounded-lg border p-2 ${plan.isActive ? "border-emerald-100 text-emerald-600" : "border-slate-200 text-slate-400"}`}><Power className="h-4 w-4" /></button>
+                      <button type="button" title={plan.status === "active" ? "Deactivate" : "Activate"} onClick={() => togglePlan(plan)} className={`rounded-lg border p-2 ${plan.status === "active" ? "border-emerald-100 text-emerald-600" : "border-slate-200 text-slate-400"}`}><Power className="h-4 w-4" /></button>
                       <button type="button" title="Delete" onClick={() => deletePlan(plan)} className="rounded-lg border border-red-100 p-2 text-red-600"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </article>
@@ -467,4 +469,8 @@ export default function SubscriptionPlanManagement() {
     </div>
   );
 }
+
+
+
+
 

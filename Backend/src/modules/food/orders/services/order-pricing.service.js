@@ -1,19 +1,19 @@
 import mongoose from 'mongoose';
 import { FoodOrder } from '../models/order.model.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
 import { FoodFeeSettings } from '../../admin/models/feeSettings.model.js';
 import { FoodOffer } from '../../admin/models/offer.model.js';
 import { FoodOfferUsage } from '../../admin/models/offerUsage.model.js';
 import { ValidationError } from '../../../../core/auth/errors.js';
 import { haversineKm } from './order.helpers.js';
+import { getSingleKitchenContext } from '../../shared/singleKitchen.service.js';
 
 export async function calculateOrderPricing(userId, dto) {
-  const restaurant = await FoodRestaurant.findById(dto.restaurantId)
-    .select("status location itemDiscounts")
-    .lean();
-  if (!restaurant) throw new ValidationError("Restaurant not found");
-  if (restaurant.status !== "approved")
-    throw new ValidationError("Restaurant not available");
+  const { restaurant } = await getSingleKitchenContext();
+  if (!restaurant) throw new ValidationError('Admin kitchen not found');
+  if (restaurant.status !== 'approved')
+    throw new ValidationError('Admin kitchen is not available');
+
+  dto.restaurantId = restaurant._id?.toString?.() || String(restaurant._id || '');
 
   const items = Array.isArray(dto.items) ? dto.items : [];
   let itemDiscountTotal = 0;
@@ -275,3 +275,4 @@ export async function calculateOrderPricing(userId, dto) {
     },
   };
 }
+

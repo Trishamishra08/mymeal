@@ -68,17 +68,17 @@ export default function SubscriptionPlans() {
         const response = await api.get("/food/subscription-plans/public");
         const apiPlans = response?.data?.data?.plans || response?.data?.plans || [];
         const mapped = apiPlans
-          .filter((plan) => plan?.title && plan?.durationDays)
+          .filter((plan) => (plan?.name || plan?.title) && plan?.durationDays)
           .map((plan, index) => ({
             ...plan,
             id: plan._id || plan.id || `plan-${index}`,
-            title: plan.title,
+            title: plan.name || plan.title,
             durationDays: plan.durationDays,
             subtitle: plan.subtitle || "",
             description: plan.description || "",
             badge: plan.badge || "",
             currency: plan.currency || "INR",
-            features: Array.isArray(plan.features) ? plan.features : [],
+            features: Array.isArray(plan.benefits) ? plan.benefits : Array.isArray(plan.features) ? plan.features : [],
           }));
 
         if (!cancelled) {
@@ -183,13 +183,13 @@ export default function SubscriptionPlans() {
                       <span className="font-semibold text-gray-800">{plan.deliveryTime.from} - {plan.deliveryTime.to}</span>
                     </div>
                   )}
-                  {plan.allowMealCustomization && (
+                  {plan.enableMealCustomization && (
                     <div className="flex flex-col rounded-md bg-gray-50 p-2 border border-gray-100">
                       <span className="text-[10px] text-gray-500 font-medium">Customization</span>
                       <span className="font-semibold text-gray-800">Allowed {plan.customizationCutoffTime && `(by ${plan.customizationCutoffTime})`}</span>
                     </div>
                   )}
-                  {plan.allowSkipDelivery && (
+                  {plan.enableSkipDelivery && (
                     <div className="flex flex-col rounded-md bg-gray-50 p-2 border border-gray-100">
                       <span className="text-[10px] text-gray-500 font-medium">Skip Delivery</span>
                       <span className="font-semibold text-gray-800">Allowed</span>
@@ -265,3 +265,4 @@ export default function SubscriptionPlans() {
     </div>
   );
 }
+

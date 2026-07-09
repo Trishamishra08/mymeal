@@ -117,7 +117,6 @@ export const initSocket = async (server) => {
 
         // Auto-join role rooms (lets us emit without a custom join).
         if (userId && role) {
-            if (role === 'RESTAURANT') socket.join(roomNames.restaurant(userId));
             if (role === 'USER') socket.join(roomNames.user(userId));
             if (role === 'ADMIN') socket.join('admin'); // Admin panel broadcasts
             if (role === 'DELIVERY_PARTNER') {
@@ -139,14 +138,6 @@ export const initSocket = async (server) => {
             }
         });
 
-        // Explicit join (used by existing restaurant client hook).
-        socket.on('join-restaurant', (restaurantId) => {
-            if (socket.user?.role !== 'RESTAURANT') return;
-            // Security: only join your own restaurant room.
-            if (String(socket.user?.userId) !== String(restaurantId)) return;
-            socket.join(roomNames.restaurant(restaurantId));
-            socket.emit('restaurant-room-joined', { room: roomNames.restaurant(restaurantId), restaurantId: String(restaurantId) });
-        });
 
         // Explicit join (used by existing delivery client hook).
         socket.on('join-delivery', (deliveryPartnerId) => {
@@ -181,11 +172,11 @@ export const initSocket = async (server) => {
 
         // ─── Live Tracking Events ───────────────────────────────────────
 
-        // Users / restaurants subscribe to an order's real-time tracking room.
+        // Users, admins, and delivery partners subscribe to an order's real-time tracking room.
         socket.on('join-tracking', (orderId) => {
             if (!orderId) return;
             const role = socket.user?.role;
-            if (role !== 'USER' && role !== 'RESTAURANT' && role !== 'DELIVERY_PARTNER') return;
+            if (role !== 'USER' && role !== 'ADMIN' && role !== 'DELIVERY_PARTNER') return;
             const room = roomNames.tracking(orderId);
             socket.join(room);
             logger.info(`Socket ${socket.id} (${role}:${userId}) joined tracking room ${room}`);
@@ -424,3 +415,4 @@ export const getIO = () => {
 };
 
 export const rooms = roomNames;
+

@@ -4,7 +4,7 @@ import { FoodHeroBanner } from '../models/heroBanner.model.js';
 import { FoodUnder250Banner } from '../models/under250Banner.model.js';
 import { FoodDiningBanner } from '../models/diningBanner.model.js';
 import { FoodExploreIcon } from '../models/exploreIcon.model.js';
-import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
+
 import { sendResponse } from '../../../../utils/response.js';
 import mongoose from 'mongoose';
 

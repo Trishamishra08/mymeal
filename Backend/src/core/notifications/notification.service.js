@@ -15,8 +15,8 @@ const normalizePagination = ({ page = 1, limit = 20 } = {}) => {
 const normalizeOwnerType = (role) => {
     const normalized = String(role || '').trim().toUpperCase();
     if (normalized === 'USER') return 'USER';
-    if (normalized === 'RESTAURANT') return 'RESTAURANT';
     if (normalized === 'DELIVERY_PARTNER') return 'DELIVERY_PARTNER';
+    if (normalized === 'ADMIN') return 'ADMIN';
     return null;
 };
 
@@ -213,3 +213,4 @@ export const dismissAllNotifications = async ({ ownerType, ownerId } = {}) => {
         modifiedCount: Number(result?.modifiedCount || 0)
     };
 };
+

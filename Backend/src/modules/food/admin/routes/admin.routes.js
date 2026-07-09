@@ -14,14 +14,6 @@ import * as appIntroAdController from '../controllers/appIntroAd.controller.js';
 import { getAppCustomizationController, sendAppCustomizationTestNotificationController, updateAppCustomizationController } from '../../shared/appCustomization.controller.js';
 import * as subscriptionController from '../../subscription/controllers/subscription.controller.js';
 import {
-    listMealSlotsAdminController,
-    createMealSlotController,
-    updateMealSlotController,
-    deleteMealSlotController,
-    toggleMealSlotStatusController,
-    updateMealSlotOrderController,
-} from '../../landing/controllers/mealSlot.controller.js';
-import {
     listSubscriptionPlansAdminController,
     createSubscriptionPlanController,
     updateSubscriptionPlanController,
@@ -61,13 +53,6 @@ router.delete('/subscription-plans/:id', deleteSubscriptionPlanController);
 router.patch('/subscription-plans/:id/status', toggleSubscriptionPlanStatusController);
 router.patch('/subscription-plans/:id/order', updateSubscriptionPlanOrderController);
 
-// ----- Meal Slots -----
-router.get('/meal-slots', listMealSlotsAdminController);
-router.post('/meal-slots', upload.single('image'), createMealSlotController);
-router.patch('/meal-slots/:id', upload.single('image'), updateMealSlotController);
-router.delete('/meal-slots/:id', deleteMealSlotController);
-router.patch('/meal-slots/:id/status', toggleMealSlotStatusController);
-router.patch('/meal-slots/:id/order', updateMealSlotOrderController);
 
 // ----- MyMeal Menu Management -----
 router.use('/menu-management', menuManagementRoutes);
@@ -93,43 +78,9 @@ router.delete('/safety-emergency-reports/:id', adminController.deleteSafetyEmerg
 router.get('/support-tickets', adminController.getSupportTicketsController);
 router.patch('/support-tickets/:id', adminController.updateSupportTicketController);
 router.get('/global-search', adminController.globalSearch);
-router.get('/restaurants/complaints', adminController.getRestaurantComplaints);
-router.patch('/restaurants/complaints/:id', adminController.updateRestaurantComplaint);
 
-// ----- Restaurants -----
-router.get('/restaurants', adminController.getRestaurants);
-router.get('/dashboard-stats', adminController.getDashboardStats);
-router.get('/reports/restaurants', adminController.getRestaurantReport);
-router.get('/reports/transactions', adminController.getTransactionReport);
-router.get('/reports/tax', adminController.getTaxReport);
-router.get('/reports/tax/:id', adminController.getTaxReportDetail);
-router.get('/restaurants/pending', adminController.getPendingRestaurants);
-router.get('/restaurants/reviews', adminController.getRestaurantReviews);
-router.get('/restaurants/:id/menu-pdf', adminController.getRestaurantMenuPdfDownloadUrl);
-router.get('/restaurants/:id/download-menu-pdf', adminController.downloadRestaurantMenuPdf);
-router.get('/restaurants/:id', adminController.getRestaurantById);
-router.get('/restaurants/:id/analytics', adminController.getRestaurantAnalytics);
-router.get('/restaurants/:id/menu', adminController.getRestaurantMenuById);
-router.get('/restaurants/:id/menu-pdf', adminController.getRestaurantMenuPdfDownloadUrl);
-router.post('/restaurants', adminController.createRestaurant);
-router.patch('/restaurants/:id', adminController.updateRestaurantById);
-router.patch('/restaurants/:id/status', adminController.updateRestaurantStatus);
-router.patch('/restaurants/:id/location', adminController.updateRestaurantLocation);
-router.patch('/restaurants/:id/menu', adminController.updateRestaurantMenuById);
-router.patch('/restaurants/:id/approve', adminController.approveRestaurant);
-router.patch('/restaurants/:id/reject', adminController.rejectRestaurant);
-router.patch('/restaurants/:id/zone-rank', adminController.updateRestaurantZoneRank);
-router.delete('/restaurants/:id', adminController.deleteRestaurant);
-
-// ----- Restaurant Commission -----
-router.get('/restaurant-commissions/bootstrap', adminController.getRestaurantCommissionBootstrap);
-router.post('/restaurant-commissions/global', adminController.updateGlobalRestaurantCommissionSettings);
-router.get('/restaurant-commissions', adminController.getRestaurantCommissions);
-router.post('/restaurant-commissions', adminController.createRestaurantCommission);
-router.get('/restaurant-commissions/:id', adminController.getRestaurantCommissionById);
-router.patch('/restaurant-commissions/:id', adminController.updateRestaurantCommission);
-router.delete('/restaurant-commissions/:id', adminController.deleteRestaurantCommission);
-router.patch('/restaurant-commissions/:id/toggle', adminController.toggleRestaurantCommissionStatus);
+// ----- Restaurants ----- (REMOVED)
+// ----- Restaurant Commission ----- (REMOVED)
 
 // ----- Categories -----
 router.get('/categories', adminController.getCategories);
@@ -141,11 +92,7 @@ router.patch('/categories/:id/approve', adminController.approveCategory);
 router.patch('/categories/:id/reject', adminController.rejectCategory);
 router.patch('/categories/:id/make-global', adminController.makeCategoryGlobal);
 
-// ----- Restaurant Add-ons Approval -----
-router.get('/addons', addonsApprovalController.getRestaurantAddons);
-router.patch('/addons/:id', addonsApprovalController.updateRestaurantAddon);
-router.patch('/addons/:id/approve', addonsApprovalController.approveRestaurantAddon);
-router.patch('/addons/:id/reject', addonsApprovalController.rejectRestaurantAddon);
+// ----- Restaurant Add-ons Approval ----- (REMOVED)
 
 // ----- Foods -----
 // Food approval queue (pending items created by restaurants)

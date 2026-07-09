@@ -1,8 +1,10 @@
 import Promocode from '../models/Promocode.js';
 import { sendResponse } from '../utils/response.js';
-import { FoodRestaurant } from '../modules/food/restaurant/models/restaurant.model.js';
 
-const syncRestaurantDiscount = async (restaurantId) => {
+import { ValidationError } from '../core/auth/errors.js';
+import { getSingleKitchenContext } from '../modules/food/shared/singleKitchen.service.js';
+
+const syncKitchenDiscount = async (restaurantId) => {
     try {
         const now = new Date();
         const activePromos = await Promocode.find({
@@ -10,7 +12,7 @@ const syncRestaurantDiscount = async (restaurantId) => {
             isActive: true,
             expiryDate: { $gt: now }
         });
-        
+
         let maxDiscount = 0;
         for (const promo of activePromos) {
             if (!promo.usageLimit || promo.usageCount < promo.usageLimit) {
@@ -19,27 +21,33 @@ const syncRestaurantDiscount = async (restaurantId) => {
                 }
             }
         }
-        
+
         await FoodRestaurant.findByIdAndUpdate(restaurantId, { discount: maxDiscount });
     } catch (err) {
-        console.error('Error syncing restaurant discount:', err);
+        console.error('Error syncing kitchen discount:', err);
     }
 };
 
-// Restaurant: Create Promocode
-export const createPromocode = async (req, res, next) => {
+async function getKitchenRestaurantId() {
+    const { restaurant } = await getSingleKitchenContext();
+    if (!restaurant?._id) {
+        throw new ValidationError('Admin kitchen not found');
+    }
+    return String(restaurant._id);
+}
+
+export const createPromocode = async (_req, res, next) => {
   try {
-    const restaurantId = req.user?.userId;
-    const { code, description, discountType, discountValue, minOrderAmount, maxDiscountAmount, expiryDate, usageLimit } = req.body;
+    const restaurantId = await getKitchenRestaurantId();
+    const { code, description, discountType, discountValue, minOrderAmount, maxDiscountAmount, expiryDate, usageLimit } = _req.body;
 
     if (!code || !description || !discountType || !discountValue || !expiryDate) {
       return res.status(400).json({ success: false, message: 'Please provide all required fields' });
     }
 
-    // Check if code already exists for this restaurant
     const existingCode = await Promocode.findOne({ restaurantId, code: code.toUpperCase() });
     if (existingCode) {
-      return res.status(400).json({ success: false, message: 'Promocode with this code already exists for your restaurant' });
+      return res.status(400).json({ success: false, message: 'Promocode with this code already exists for the admin kitchen' });
     }
 
     const promocode = await Promocode.create({
@@ -54,7 +62,7 @@ export const createPromocode = async (req, res, next) => {
       usageLimit: usageLimit || null,
     });
 
-    await syncRestaurantDiscount(restaurantId);
+    await syncKitchenDiscount(restaurantId);
 
     return sendResponse(res, 201, 'Promocode created successfully', { promocode });
   } catch (error) {
@@ -62,10 +70,9 @@ export const createPromocode = async (req, res, next) => {
   }
 };
 
-// Restaurant: Get all Promocodes
-export const getRestaurantPromocodes = async (req, res, next) => {
+export const getRestaurantPromocodes = async (_req, res, next) => {
   try {
-    const restaurantId = req.user?.userId;
+    const restaurantId = await getKitchenRestaurantId();
     const promocodes = await Promocode.find({ restaurantId }).sort('-createdAt');
 
     return sendResponse(res, 200, 'Promocodes fetched successfully', { promocodeList: promocodes });
@@ -74,10 +81,9 @@ export const getRestaurantPromocodes = async (req, res, next) => {
   }
 };
 
-// Restaurant: Toggle Status
 export const togglePromocodeStatus = async (req, res, next) => {
   try {
-    const restaurantId = req.user?.userId;
+    const restaurantId = await getKitchenRestaurantId();
     const { id } = req.params;
     const { isActive } = req.body;
 
@@ -88,10 +94,10 @@ export const togglePromocodeStatus = async (req, res, next) => {
     );
 
     if (!promocode) {
-      return res.status(404).json({ success: false, message: 'Promocode not found or you do not have permission' });
+      return res.status(404).json({ success: false, message: 'Promocode not found' });
     }
 
-    await syncRestaurantDiscount(restaurantId);
+    await syncKitchenDiscount(restaurantId);
 
     return sendResponse(res, 200, 'Promocode status updated', { promocode });
   } catch (error) {
@@ -99,19 +105,18 @@ export const togglePromocodeStatus = async (req, res, next) => {
   }
 };
 
-// Restaurant: Delete Promocode
 export const deletePromocode = async (req, res, next) => {
   try {
-    const restaurantId = req.user?.userId;
+    const restaurantId = await getKitchenRestaurantId();
     const { id } = req.params;
 
     const promocode = await Promocode.findOneAndDelete({ _id: id, restaurantId });
 
     if (!promocode) {
-      return res.status(404).json({ success: false, message: 'Promocode not found or you do not have permission' });
+      return res.status(404).json({ success: false, message: 'Promocode not found' });
     }
 
-    await syncRestaurantDiscount(restaurantId);
+    await syncKitchenDiscount(restaurantId);
 
     return res.status(204).send();
   } catch (error) {
@@ -119,19 +124,17 @@ export const deletePromocode = async (req, res, next) => {
   }
 };
 
-// User: Get active Promocodes for a Restaurant
-export const getActivePromocodes = async (req, res, next) => {
+export const getActivePromocodes = async (_req, res, next) => {
   try {
-    const { restaurantId } = req.params;
+    const restaurantId = await getKitchenRestaurantId();
 
-    const promocodes = await Promocode.find({ 
-      restaurantId, 
+    const promocodes = await Promocode.find({
+      restaurantId,
       isActive: true,
       expiryDate: { $gt: new Date() }
     }).sort('-createdAt');
 
-    // Filter out those that have reached usage limit
-    const validPromocodes = promocodes.filter(p => !p.usageLimit || p.usageCount < p.usageLimit);
+    const validPromocodes = promocodes.filter((p) => !p.usageLimit || p.usageCount < p.usageLimit);
 
     return sendResponse(res, 200, 'Active promocodes fetched', { promocodeList: validPromocodes });
   } catch (error) {
@@ -139,19 +142,19 @@ export const getActivePromocodes = async (req, res, next) => {
   }
 };
 
-// User: Validate Promocode
 export const validatePromocode = async (req, res, next) => {
   try {
-    const { code, restaurantId, orderAmount } = req.body;
+    const { code, orderAmount } = req.body;
+    const restaurantId = req.body?.restaurantId || await getKitchenRestaurantId();
 
-    if (!code || !restaurantId || !orderAmount) {
-      return res.status(400).json({ success: false, message: 'Please provide code, restaurantId and orderAmount' });
+    if (!code || !orderAmount) {
+      return res.status(400).json({ success: false, message: 'Please provide code and orderAmount' });
     }
 
-    const promocode = await Promocode.findOne({ 
-      restaurantId, 
+    const promocode = await Promocode.findOne({
+      restaurantId,
       code: code.toUpperCase(),
-      isActive: true 
+      isActive: true
     });
 
     if (!promocode) {
@@ -167,10 +170,9 @@ export const validatePromocode = async (req, res, next) => {
     }
 
     if (orderAmount < promocode.minOrderAmount) {
-      return res.status(400).json({ success: false, message: `Minimum order amount of ₹${promocode.minOrderAmount} is required` });
+      return res.status(400).json({ success: false, message: `Minimum order amount of Rs.${promocode.minOrderAmount} is required` });
     }
 
-    // Calculate discount
     let discountAmount = 0;
     if (promocode.discountType === 'FLAT') {
       discountAmount = promocode.discountValue;
@@ -181,7 +183,6 @@ export const validatePromocode = async (req, res, next) => {
       }
     }
 
-    // Ensure discount is not greater than order amount
     if (discountAmount > orderAmount) {
       discountAmount = orderAmount;
     }

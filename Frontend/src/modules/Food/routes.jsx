@@ -12,8 +12,7 @@ import { useRestaurantNotifications } from "@food/hooks/useRestaurantNotificatio
 // Lazy Loading Components
 const UserRouter = lazy(() => import("@food/components/user/UserRouter"))
 
-// Restaurant Module
-const RestaurantRouter = lazy(() => import("@food/components/restaurant/RestaurantRouter"))
+// const RestaurantRouter = lazy(() => import("@food/components/restaurant/RestaurantRouter"))
 
 // Admin Module
 const AdminRouter = lazy(() => import("@food/components/admin/AdminRouter"))
@@ -93,12 +92,12 @@ export default function App() {
         <Suspense fallback={<Loader />}>
           <Routes>
             {/* Restaurant Module - Already mapped to /restaurant */}
-            <Route
+            {/* <Route
               path="restaurant/*"
               element={
                 <RestaurantRouter />
               }
-            />
+            /> */}
 
             {/* Delivery Module - Already mapped to /delivery */}
             <Route
