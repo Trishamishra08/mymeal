@@ -23,17 +23,14 @@ export const adminSidebarMenu = [
     icon: "FileText",
     subItems: [
       { label: "All", path: "/admin/food/orders/all" },
-      { label: "Scheduled", path: "/admin/food/orders/scheduled" },
       { label: "Pending", path: "/admin/food/orders/pending" },
       { label: "Accepted", path: "/admin/food/orders/accepted" },
       { label: "Processing", path: "/admin/food/orders/processing" },
       { label: "Food On The Way", path: "/admin/food/orders/food-on-the-way" },
       { label: "Delivered", path: "/admin/food/orders/delivered" },
       { label: "Cancelled", path: "/admin/food/orders/canceled" },
-      { label: "Restaurant cancelled", path: "/admin/food/orders/restaurant-cancelled" },
       { label: "Payment Failed", path: "/admin/food/orders/payment-failed" },
       { label: "Refunded", path: "/admin/food/orders/refunded" },
-      { label: "Offline Payments", path: "/admin/food/orders/offline-payments" },
     ],
   },
   {
@@ -125,17 +122,14 @@ export const adminSidebarMenu = [
         icon: "FileText",
         subItems: [
           { label: "All", path: "/admin/food/orders/all" },
-          { label: "Scheduled", path: "/admin/food/orders/scheduled" },
           { label: "Pending", path: "/admin/food/orders/pending" },
           { label: "Accepted", path: "/admin/food/orders/accepted" },
           { label: "Processing", path: "/admin/food/orders/processing" },
           { label: "Food On The Way", path: "/admin/food/orders/food-on-the-way" },
           { label: "Delivered", path: "/admin/food/orders/delivered" },
           { label: "Cancelled", path: "/admin/food/orders/canceled" },
-          { label: "Restaurant cancelled", path: "/admin/food/orders/restaurant-cancelled" },
           { label: "Payment Failed", path: "/admin/food/orders/payment-failed" },
           { label: "Refunded", path: "/admin/food/orders/refunded" },
-          { label: "Offline Payments", path: "/admin/food/orders/offline-payments" },
         ],
       },
       {
@@ -221,12 +215,9 @@ export const adminSidebarMenu = [
     type: "section",
     label: "DELIVERYMAN MANAGEMENT",
     items: [
-      /* { type: "link", label: "Delivery Cash Limit", path: "/admin/food/delivery-cash-limit", icon: "IndianRupee" }, */
-      { type: "link", label: "Delivery & Platform Fee", path: "/admin/food/fee-settings", icon: "DollarSign" },
       /* { type: "link", label: "Cash limit settlement", path: "/admin/food/cash-limit-settlement", icon: "Receipt" }, */
-      { type: "link", label: "Delivery Withdrawal", path: "/admin/food/delivery-withdrawal", icon: "Wallet" },
-      { type: "link", label: "Delivery boy Wallet", path: "/admin/food/delivery-boy-wallet", icon: "PiggyBank" },
-      { type: "link", label: "Delivery Boy Commission", path: "/admin/food/delivery-boy-commission", icon: "DollarSign" },
+      { type: "link", label: "Delivery & Platform Fee", path: "/admin/food/fee-settings", icon: "DollarSign" },
+      { type: "link", label: "Delivery Boy Salary", path: "/admin/food/delivery-boy-salary", icon: "DollarSign" },
       { type: "link", label: "Delivery Emergency Help", path: "/admin/food/delivery-emergency-help", icon: "Phone" },
       { type: "link", label: "Delivery Support Tickets", path: "/admin/food/delivery-support-tickets", icon: "MessageSquare" },
       {

@@ -1,4 +1,5 @@
-import mongoose from 'mongoose';
+import mongoose, { isValidObjectId } from 'mongoose';
+import { syncSubscriptionOrderStatus } from "../../subscription/services/subscription.service.js";
 import { FoodOrder } from '../models/order.model.js';
 
 import { FoodTransaction } from '../models/foodTransaction.model.js';
@@ -1289,6 +1290,9 @@ export async function updateOrderStatusDelivery(orderId, deliveryPartnerId, orde
     to: orderStatus,
   });
   await order.save();
+
+  // Sync to subscription schedule if applicable
+  await syncSubscriptionOrderStatus(order);
 
   enqueueOrderEvent('delivery_status_updated', {
     orderMongoId: order._id?.toString?.(),
